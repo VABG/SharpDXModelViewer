@@ -4,10 +4,12 @@ cbuffer ViewProjection : register(b0)
     matrix Projection;
 };
 
-// ── Shadow light matrices (bound at b1 during main scene pass) ──
+// ── Shadow light matrices + direction (bound at b1 during main scene pass) ──
 cbuffer ShadowMatrices : register(b1)
 {
     matrix LightViewProjection;  // Light View × Projection (ortho)
+    float3 LightDirection;       // Direction pointing TO the light source
+    float Padding;               // Alignment padding
 };
 
 struct VSInput

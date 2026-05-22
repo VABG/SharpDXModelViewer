@@ -7,6 +7,8 @@
 cbuffer LightMatrices : register(b0)
 {
     matrix LightViewProjection;  // Light View × Projection (pre-combined)
+    float3 LightDirection;       // Unused in depth pass, but cbuffer layout matches
+    float Padding;
 };
 
 struct VSInput

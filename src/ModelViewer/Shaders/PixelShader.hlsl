@@ -28,6 +28,14 @@ SamplerState ShadowSampler : register(s0)
     Filter = FILTER_MIN_MAG_MIP_POINT;
 };
 
+// ── Shadow/lighting data (bound at b1 during main scene pass) ──
+cbuffer ShadowMatrices : register(b1)
+{
+    matrix LightViewProjection;
+    float3 LightDirection;       // Direction pointing TO the light source
+    float Padding;
+};
+
 /// <summary>
 /// Computes the shadow factor for a fragment.
 /// Returns 1.0 = fully lit, 0.0 = fully shadowed.
@@ -58,10 +66,8 @@ float ComputeShadowFactor(float4 lightClipPos)
 
 float4 PSMain(VSOutput input) : SV_TARGET
 {
-    // ── Light direction points TO the light source (above the scene) ──
-    // ShadowMap uses (0.577, -0.577, 0.577) as ray direction (downward),
-    // so lighting direction is the opposite (upward toward the light).
-    float3 lightDir = normalize(float3(-0.577, 0.577, -0.577));
+    // ── Light direction comes from the cbuffer (matches ShadowMap) ──
+    float3 lightDir = normalize(LightDirection);
     float3 lightColor = float3(1.0, 0.95, 0.9);
     float3 ambientColor = float3(0.15, 0.15, 0.18);
     float3 diffuseColor = float3(0.5, 0.5, 0.5);

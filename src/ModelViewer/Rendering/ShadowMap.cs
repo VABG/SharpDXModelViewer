@@ -1,4 +1,3 @@
-using Assimp;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -35,6 +34,9 @@ public class ShadowMap : IDisposable
     /// <summary> Combined light View × Projection matrix (pre-transposed for shader upload). </summary>
     public Matrix LightViewProjectionMatrix { get; private set; }
 
+    /// <summary> Direction pointing TO the light source (for diffuse lighting). </summary>
+    public Vector3 LightDirection { get; private set; }
+
     /// <summary> Shader resource view bound to the pixel shader for shadow sampling. </summary>
     public ShaderResourceView? ShadowSrv => _shadowSrv;
 
@@ -57,6 +59,9 @@ public class ShadowMap : IDisposable
         // Default light direction: top-down at ~45° angle, pointing toward origin
         var lightDir = lightDirection ?? new Vector3(0.577f, -0.577f, 0.577f);
         lightDir = Vector3.Normalize(lightDir);
+
+        // Store direction pointing TO the light (opposite of ray direction)
+        LightDirection = -lightDir;
 
         BuildOrthographicCamera(lightDir, sceneRadius, sceneHeight);
         CreateShadowTexture();
@@ -140,6 +145,7 @@ public class ShadowMap : IDisposable
     public void UpdateLightCamera(Vector3 lightDirection, float sceneRadius, float sceneHeight)
     {
         lightDirection = Vector3.Normalize(lightDirection);
+        LightDirection = -lightDirection; // Direction pointing TO the light
         BuildOrthographicCamera(lightDirection, sceneRadius, sceneHeight);
     }
 

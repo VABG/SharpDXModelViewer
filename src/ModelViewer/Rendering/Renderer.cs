@@ -77,10 +77,10 @@ public class Renderer : IDisposable
         };
         _viewProjectionBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, cbDesc);
 
-        // ── Create shadow constant buffer (holds single LightViewProjection matrix) ──
+                // ── Create shadow constant buffer (holds LightViewProjection matrix + LightDirection) ──
         var shadowCbDesc = new BufferDescription
         {
-            SizeInBytes = Marshal.SizeOf<Matrix>(),
+            SizeInBytes = Marshal.SizeOf<ShadowConstantBuffer>(),
             Usage = ResourceUsage.Dynamic,
             BindFlags = BindFlags.ConstantBuffer,
             CpuAccessFlags = CpuAccessFlags.Write,
@@ -265,7 +265,7 @@ public class Renderer : IDisposable
                                 // ── Camera ─────────────────────────────────────────────────────
                 _camera.UpdateProjection(width, height);
 
-                // ═══════════════════════════════════════════════════════════════
+                                // ═══════════════════════════════════════════════════════════════
                 //  SHADOW MAP DEPTH PASS
                 //  Render the scene from the light's perspective into the shadow map.
                 // ═══════════════════════════════════════════════════════════════
@@ -281,12 +281,12 @@ public class Renderer : IDisposable
                     // Set viewport to shadow map size
                     context.Rasterizer.SetViewport(0, 0, _shadowMap.Size, _shadowMap.Size);
 
-                    // Update shadow constant buffer with LightViewProjection matrix
-                    var lightViewProj = _shadowMap.LightViewProjectionMatrix;
-                    lightViewProj.Transpose();
+                    // Update shadow constant buffer with LightViewProjection matrix + LightDirection
+                    var cb = new ShadowConstantBuffer(_shadowMap.LightViewProjectionMatrix, _shadowMap.LightDirection);
+                    cb.LightViewProjection.Transpose();
                     context.MapSubresource(_shadowConstantBuffer, MapMode.WriteDiscard,
                         MapFlags.None, out var shadowData);
-                    Marshal.StructureToPtr(lightViewProj, shadowData.DataPointer, false);
+                    Marshal.StructureToPtr(cb, shadowData.DataPointer, false);
                     context.UnmapSubresource(_shadowConstantBuffer, 0);
 
                     // Set depth-pass pipeline state
@@ -356,10 +356,11 @@ public class Renderer : IDisposable
                 context.PixelShader.Set(_pixelShader);
                 context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
 
-                // ── Bind shadow matrices at cbuffer slot b1 ──
+                                // ── Bind shadow matrices at cbuffer slot b1 (vertex + pixel shader) ──
                 if (_shadowMap != null && _shadowConstantBuffer != null)
                 {
                     context.VertexShader.SetConstantBuffer(1, _shadowConstantBuffer);
+                    context.PixelShader.SetConstantBuffer(1, _shadowConstantBuffer);
                 }
 
                 // ── Bind shadow map texture at t0 (pixel shader) ──
