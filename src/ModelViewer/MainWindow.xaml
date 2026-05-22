@@ -1,0 +1,38 @@
+<Window x:Class="ModelViewer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="3D Model Viewer" Height="700" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="DarkTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Menu bar for model loading -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open Model..." Click="OpenModel_Click" />
+                <Separator Style="{StaticResource MenuItemSeparatorStyle}"/>
+                <MenuItem Header="E_xit" Click="Exit_Click" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Reset Camera" Click="ResetCamera_Click" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Status bar showing FPS and model info -->
+        <StatusBar DockPanel.Dock="Bottom" Background="#2D2D30" Foreground="White">
+            <TextBlock x:Name="StatusText" Text="Ready" Margin="5,0" />
+            <TextBlock x:Name="FpsText" Text="FPS: --" Margin="100,0,5,0" />
+        </StatusBar>
+
+        <!-- The 3D rendering surface will be hosted here -->
+        <ContentControl x:Name="RenderHost" />
+    </DockPanel>
+</Window>
+

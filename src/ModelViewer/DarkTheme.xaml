@@ -1,0 +1,170 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ======================== Colors ======================== -->
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#2D2D30"/>
+    <SolidColorBrush x:Key="MenuBorderBrush" Color="#3E3E42"/>
+    <SolidColorBrush x:Key="MenuForegroundBrush" Color="White"/>
+    <SolidColorBrush x:Key="MenuHighlightBrush" Color="#007ACC"/>
+    <SolidColorBrush x:Key="MenuSeparatorBrush" Color="#3E3E42"/>
+
+    <!-- ======================== ContextMenu Template ======================== -->
+    <!-- Replaces the entire built-in template so borders are fully under our control -->
+    <ControlTemplate x:Key="ContextMenuTemplate" TargetType="ContextMenu">
+        <Border Background="{StaticResource MenuBackgroundBrush}"
+                BorderBrush="{StaticResource MenuBorderBrush}"
+                BorderThickness="1"
+                Padding="2">
+            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+        </Border>
+    </ControlTemplate>
+
+    <!-- ======================== Top-Level MenuItem (menu bar) ======================== -->
+    <ControlTemplate x:Key="TopLevelMenuItemTemplate" TargetType="MenuItem">
+        <Grid>
+            <Border x:Name="Border"
+                    Background="Transparent"
+                    Padding="6,2">
+                <ContentPresenter ContentSource="Header"
+                                  RecognizesAccessKey="True"
+                                  Margin="0,1"/>
+            </Border>
+            <!-- Popup hosts the dropdown submenu items (non-visual, doesn't affect layout) -->
+            <Popup x:Name="SubMenuPopup"
+                   Placement="Bottom"
+                   HorizontalOffset="2"
+                   AllowsTransparency="True"
+                   StaysOpen="False"
+                   IsOpen="False"
+                   PopupAnimation="Fade">
+                <Border Background="{StaticResource MenuBackgroundBrush}"
+                        BorderBrush="{StaticResource MenuBorderBrush}"
+                        BorderThickness="1"
+                        Padding="2">
+                    <StackPanel IsItemsHost="True"
+                                KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                </Border>
+            </Popup>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+            </Trigger>
+            <Trigger Property="IsSubmenuOpen" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+                <Setter TargetName="SubMenuPopup" Property="IsOpen" Value="True"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!-- ======================== Submenu Header MenuItem (has dropdown arrow) ======================== -->
+    <ControlTemplate x:Key="SubmenuHeaderTemplate" TargetType="MenuItem">
+        <Grid>
+            <Border x:Name="Border"
+                    Background="Transparent"
+                    Padding="6,2">
+                <StackPanel Orientation="Horizontal">
+                    <ContentPresenter ContentSource="Header"
+                                      RecognizesAccessKey="True"
+                                      Margin="0,1"/>
+                    <Path x:Name="Arrow"
+                          Data="M 0 0 L 4 4 L 0 8 Z"
+                          Fill="{StaticResource MenuForegroundBrush}"
+                          Margin="16,0,0,0"
+                          VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            <!-- Popup hosts the nested submenu items (non-visual, doesn't affect layout) -->
+            <Popup x:Name="SubMenuPopup"
+                   Placement="Right"
+                   HorizontalOffset="-2"
+                   AllowsTransparency="True"
+                   StaysOpen="False"
+                   IsOpen="False"
+                   PopupAnimation="Fade">
+                <Border Background="{StaticResource MenuBackgroundBrush}"
+                        BorderBrush="{StaticResource MenuBorderBrush}"
+                        BorderThickness="1"
+                        Padding="2">
+                    <StackPanel IsItemsHost="True"
+                                KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                </Border>
+            </Popup>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+            </Trigger>
+            <Trigger Property="IsSubmenuOpen" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+                <Setter TargetName="SubMenuPopup" Property="IsOpen" Value="True"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!-- ======================== Submenu Item MenuItem (clickable, no submenu) ======================== -->
+    <ControlTemplate x:Key="SubmenuItemTemplate" TargetType="MenuItem">
+        <Border x:Name="Border"
+                Background="Transparent"
+                Padding="6,2">
+            <StackPanel Orientation="Horizontal">
+                <ContentPresenter ContentSource="Header"
+                                  RecognizesAccessKey="True"
+                                  Margin="0,1"/>
+            </StackPanel>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="#005A9E"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!-- ======================== MenuItem Style (selects template by role) ======================== -->
+    <Style TargetType="MenuItem">
+        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}"/>
+        <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}"/>
+
+        <Style.Triggers>
+            <!-- Has a dropdown submenu -->
+            <Trigger Property="Role" Value="TopLevelHeader">
+                <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}"/>
+            </Trigger>
+            <Trigger Property="Role" Value="SubmenuHeader">
+                <Setter Property="Template" Value="{StaticResource SubmenuHeaderTemplate}"/>
+            </Trigger>
+            <!-- Clickable item -->
+            <Trigger Property="Role" Value="TopLevelItem">
+                <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}"/>
+            </Trigger>
+            <Trigger Property="Role" Value="SubmenuItem">
+                <Setter Property="Template" Value="{StaticResource SubmenuItemTemplate}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ======================== Separator Style ======================== -->
+    <Style x:Key="MenuItemSeparatorStyle" TargetType="Separator">
+        <Setter Property="Margin" Value="4,2"/>
+        <Setter Property="Background" Value="{StaticResource MenuSeparatorBrush}"/>
+        <Setter Property="Height" Value="1"/>
+    </Style>
+
+    <!-- ======================== ContextMenu Style ======================== -->
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}"/>
+        <Setter Property="Template" Value="{StaticResource ContextMenuTemplate}"/>
+    </Style>
+
+    <!-- ======================== Menu (menu bar) Style ======================== -->
+    <Style TargetType="Menu">
+        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}"/>
+    </Style>
+
+</ResourceDictionary>
