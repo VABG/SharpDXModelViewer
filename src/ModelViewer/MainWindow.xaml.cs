@@ -119,15 +119,16 @@ public partial class MainWindow : Window
 
         // Convert yaw/pitch to a 3D direction vector
         // Yaw: rotation around Y axis (-180 to 180)
-        // Pitch: elevation angle (-90 to 90), negative = pointing down
+        // Pitch: 0° = straight down, 90° = horizon, 180° = straight up
         float yawRad = (float)(YawSlider.Value * Math.PI / 180.0);
-        float pitchRad = (float)(PitchSlider.Value * Math.PI / 180.0);
+        float pitchRad = (float)((PitchSlider.Value - 90.0) * Math.PI / 180.0);
 
         float x = (float)(Math.Cos(pitchRad) * Math.Cos(yawRad));
         float y = (float)Math.Sin(pitchRad);
         float z = (float)(Math.Cos(pitchRad) * Math.Sin(yawRad));
 
         var direction = new Vector3(x, y, z);
+        direction.Normalize();
 
         // Update direction preview text
         DirectionPreview.Text = $"X: {x:F2}, Y: {y:F2}, Z: {z:F2}";
@@ -137,4 +138,5 @@ public partial class MainWindow : Window
     }
 
 }
+
 

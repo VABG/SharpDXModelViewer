@@ -50,9 +50,9 @@
                 <!-- Pitch component -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
                     <TextBlock Text="Pitch:" Foreground="#CCCCCC" FontSize="12" Width="35" />
-                    <TextBlock x:Name="PitchText" Text="-45°" Foreground="#CCCCCC" FontSize="12" />
+                    <TextBlock x:Name="PitchText" Text="45°" Foreground="#CCCCCC" FontSize="12" />
                 </StackPanel>
-                <Slider x:Name="PitchSlider" Minimum="-90" Maximum="90" Value="-45"
+                <Slider x:Name="PitchSlider" Minimum="0" Maximum="180" Value="45"
                         TickFrequency="5" IsSnapToTickEnabled="True"
                         ValueChanged="LightSlider_ValueChanged" Margin="0,0,0,8" />
 
@@ -69,4 +69,5 @@
         <ContentControl x:Name="RenderHost" />
     </DockPanel>
 </Window>
+
 

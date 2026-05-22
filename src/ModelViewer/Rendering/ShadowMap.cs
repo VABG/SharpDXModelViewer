@@ -81,8 +81,11 @@ public class ShadowMap : IDisposable
         // Light looks toward the origin
         var lightTarget = Vector3.Zero;
 
+        // Avoid gimbal lock: if light direction is parallel to WorldUp, use WorldX as up vector
+        Vector3 upVector = Math.Abs(lightDirection.Y) > 0.999f ? Vector3.UnitX : Vector3.UnitY;
+
         // Build view matrix: light camera looking from lightPosition toward origin
-        LightViewMatrix = Matrix.LookAtLH(lightPosition, lightTarget, Vector3.UnitY);
+        LightViewMatrix = Matrix.LookAtLH(lightPosition, lightTarget, upVector);
 
         // Orthographic projection covering the scene bounding box
         LightProjectionMatrix = Matrix.OrthoLH(
