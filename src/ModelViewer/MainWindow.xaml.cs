@@ -106,61 +106,35 @@ public partial class MainWindow : Window
     /// </summary>
     private void LightSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        // Guard: during XAML initialization, not all controls are constructed yet.
+        // Skip entirely until the full XAML tree is loaded.
+        if (YawSlider == null || PitchSlider == null || DirectionPreview == null)
+            return;
+
         // Update the display text for the changed slider
-        if (sender == LightXSlider)
-            LightXText.Text = e.NewValue.ToString("F2");
-        else if (sender == LightYSlider)
-            LightYText.Text = e.NewValue.ToString("F2");
-        else if (sender == LightZSlider)
-            LightZText.Text = e.NewValue.ToString("F2");
+        if (sender == YawSlider)
+            YawText.Text = $"{e.NewValue:F0}°";
+        else if (sender == PitchSlider)
+            PitchText.Text = $"{e.NewValue:F0}°";
 
-        // Guard: during XAML initialization, not all sliders are constructed yet.
-        // Only update the renderer once all three sliders exist.
-        if (LightXSlider == null || LightYSlider == null || LightZSlider == null)
-            return;
+        // Convert yaw/pitch to a 3D direction vector
+        // Yaw: rotation around Y axis (-180 to 180)
+        // Pitch: elevation angle (-90 to 90), negative = pointing down
+        float yawRad = (float)(YawSlider.Value * Math.PI / 180.0);
+        float pitchRad = (float)(PitchSlider.Value * Math.PI / 180.0);
 
-        // Build the raw direction vector from slider values
-        var direction = new Vector3(
-            (float)LightXSlider.Value,
-            (float)LightYSlider.Value,
-            (float)LightZSlider.Value);
+        float x = (float)(Math.Cos(pitchRad) * Math.Cos(yawRad));
+        float y = (float)Math.Sin(pitchRad);
+        float z = (float)(Math.Cos(pitchRad) * Math.Sin(yawRad));
 
-        // Send to renderer (it will normalize internally)
+        var direction = new Vector3(x, y, z);
+
+        // Update direction preview text
+        DirectionPreview.Text = $"X: {x:F2}, Y: {y:F2}, Z: {z:F2}";
+
+        // Send to renderer
         _renderer?.SetLightDirection(direction);
     }
 
-    /// <summary>
-    /// Normalize the light direction vector and update slider values.
-    /// </summary>
-    private void NormalizeBtn_Click(object sender, RoutedEventArgs e)
-    {
-        var direction = new Vector3(
-            (float)LightXSlider.Value,
-            (float)LightYSlider.Value,
-            (float)LightZSlider.Value);
-
-        var length = direction.Length();
-        if (length < 0.001f)
-        {
-            MessageBox.Show("Light direction vector is too small to normalize.",
-                "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        direction = Vector3.Normalize(direction);
-
-        // Update sliders
-        LightXSlider.Value = direction.X;
-        LightYSlider.Value = direction.Y;
-        LightZSlider.Value = direction.Z;
-
-        // Update display text
-        LightXText.Text = direction.X.ToString("F2");
-        LightYText.Text = direction.Y.ToString("F2");
-        LightZText.Text = direction.Z.ToString("F2");
-
-        // Update renderer
-        _renderer?.SetLightDirection(direction);
-    }
 }
 
