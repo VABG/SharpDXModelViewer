@@ -4,6 +4,12 @@ cbuffer ViewProjection : register(b0)
     matrix Projection;
 };
 
+// ── Shadow light matrices (bound at b1 during main scene pass) ──
+cbuffer ShadowMatrices : register(b1)
+{
+    matrix LightViewProjection;  // Light View × Projection (ortho)
+};
+
 struct VSInput
 {
     float3 Position : POSITION;
@@ -13,21 +19,30 @@ struct VSInput
 
 struct VSOutput
 {
-    float4 Position : SV_POSITION;
+    float4 Position    : SV_POSITION;
     float3 WorldNormal : NORMAL;
     float3 WorldPos    : TEXCOORD0;
     float2 TexCoord    : TEXCOORD1;
+    // ── New: position in light clip-space for shadow mapping ──
+    float4 LightClipPos : TEXCOORD2;
 };
 
 VSOutput VSMain(VSInput input)
 {
     VSOutput output;
     float4 worldPos = float4(input.Position, 1.0);
+
+    // ── Camera space (existing) ──
     output.Position = mul(worldPos, View);
     output.Position = mul(output.Position, Projection);
+
+    // ── Light space (new) ──
+    output.LightClipPos = mul(worldPos, LightViewProjection);
+
     output.WorldNormal = input.Normal;
     output.WorldPos = input.Position;
     output.TexCoord = input.TexCoord;
     return output;
 }
+
 
