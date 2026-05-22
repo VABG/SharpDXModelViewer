@@ -167,4 +167,41 @@
         <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}"/>
     </Style>
 
+        <!-- ======================== Slider Style ======================== -->
+    <Style TargetType="Slider">
+        <Setter Property="Foreground" Value="#007ACC"/>
+        <Setter Property="Background" Value="#3F3F46"/>
+    </Style>
+
+    <!-- ======================== Button Style ======================== -->
+    <Style TargetType="Button">
+        <Setter Property="Background" Value="#3F3F46"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="BorderBrush" Value="#555555"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="3"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#007ACC"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="#005A9E"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

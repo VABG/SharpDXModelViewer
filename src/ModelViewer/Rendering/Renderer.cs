@@ -41,6 +41,19 @@ public class Renderer : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private Task? _renderLoopTask;
     private int _frameCount;
+
+    /// <summary>
+    /// Updates the light direction for shadow mapping and diffuse lighting.
+    /// Call from the UI thread; the change takes effect on the next frame.
+    /// </summary>
+    public void SetLightDirection(Vector3 direction)
+    {
+        if (_shadowMap == null) return;
+
+        // ShadowMap.UpdateLightCamera expects the direction the light shines FROM.
+        // It internally negates it to store the direction pointing TO the light.
+        _shadowMap.UpdateLightCamera(direction, sceneRadius: 100f, sceneHeight: 50f);
+    }
     private readonly Stopwatch _fpsWatch = new();
     private int _lastWidth;
     private int _lastHeight;

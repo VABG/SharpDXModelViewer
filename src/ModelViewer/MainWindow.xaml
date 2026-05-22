@@ -31,6 +31,49 @@
             <TextBlock x:Name="FpsText" Text="FPS: --" Margin="100,0,5,0" />
         </StatusBar>
 
+        <!-- Light direction control panel (right side) -->
+        <Border DockPanel.Dock="Right" Width="200" Background="#2D2D30" Margin="5"
+                BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4">
+            <StackPanel Margin="10">
+                <TextBlock Text="Light Direction" Foreground="White"
+                           FontWeight="Bold" FontSize="14" Margin="0,0,0,10" />
+
+                <!-- X component -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock Text="X:" Foreground="#CCCCCC" FontSize="12" Width="20" />
+                    <TextBlock x:Name="LightXText" Text="0.58" Foreground="#CCCCCC" FontSize="12" />
+                </StackPanel>
+                <Slider x:Name="LightXSlider" Minimum="-1" Maximum="1" Value="0.577"
+                        TickFrequency="0.05" IsSnapToTickEnabled="True"
+                        ValueChanged="LightSlider_ValueChanged" Margin="0,0,0,8" />
+
+                <!-- Y component -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock Text="Y:" Foreground="#CCCCCC" FontSize="12" Width="20" />
+                    <TextBlock x:Name="LightYText" Text="-0.58" Foreground="#CCCCCC" FontSize="12" />
+                </StackPanel>
+                <Slider x:Name="LightYSlider" Minimum="-1" Maximum="1" Value="-0.577"
+                        TickFrequency="0.05" IsSnapToTickEnabled="True"
+                        ValueChanged="LightSlider_ValueChanged" Margin="0,0,0,8" />
+
+                <!-- Z component -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock Text="Z:" Foreground="#CCCCCC" FontSize="12" Width="20" />
+                    <TextBlock x:Name="LightZText" Text="0.58" Foreground="#CCCCCC" FontSize="12" />
+                </StackPanel>
+                <Slider x:Name="LightZSlider" Minimum="-1" Maximum="1" Value="0.577"
+                        TickFrequency="0.05" IsSnapToTickEnabled="True"
+                        ValueChanged="LightSlider_ValueChanged" Margin="0,0,0,8" />
+
+                <Separator Background="#3F3F46" Margin="0,8" />
+
+                <TextBlock Text="Preview direction:" Foreground="#999999"
+                           FontSize="11" Margin="0,0,0,4" />
+                <Button x:Name="NormalizeBtn" Content="Normalize Vector"
+                        Click="NormalizeBtn_Click" Margin="0,0,0,8" />
+            </StackPanel>
+        </Border>
+
         <!-- The 3D rendering surface will be hosted here -->
         <ContentControl x:Name="RenderHost" />
     </DockPanel>

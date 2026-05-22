@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using Microsoft.Win32;
 using ModelViewer.Rendering;
+using SharpDX;
 
 namespace ModelViewer;
 
@@ -98,6 +99,68 @@ public partial class MainWindow : Window
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    /// <summary>
+    /// Slider value changed - update the light direction in the renderer.
+    /// </summary>
+    private void LightSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        // Update the display text for the changed slider
+        if (sender == LightXSlider)
+            LightXText.Text = e.NewValue.ToString("F2");
+        else if (sender == LightYSlider)
+            LightYText.Text = e.NewValue.ToString("F2");
+        else if (sender == LightZSlider)
+            LightZText.Text = e.NewValue.ToString("F2");
+
+        // Guard: during XAML initialization, not all sliders are constructed yet.
+        // Only update the renderer once all three sliders exist.
+        if (LightXSlider == null || LightYSlider == null || LightZSlider == null)
+            return;
+
+        // Build the raw direction vector from slider values
+        var direction = new Vector3(
+            (float)LightXSlider.Value,
+            (float)LightYSlider.Value,
+            (float)LightZSlider.Value);
+
+        // Send to renderer (it will normalize internally)
+        _renderer?.SetLightDirection(direction);
+    }
+
+    /// <summary>
+    /// Normalize the light direction vector and update slider values.
+    /// </summary>
+    private void NormalizeBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var direction = new Vector3(
+            (float)LightXSlider.Value,
+            (float)LightYSlider.Value,
+            (float)LightZSlider.Value);
+
+        var length = direction.Length();
+        if (length < 0.001f)
+        {
+            MessageBox.Show("Light direction vector is too small to normalize.",
+                "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        direction = Vector3.Normalize(direction);
+
+        // Update sliders
+        LightXSlider.Value = direction.X;
+        LightYSlider.Value = direction.Y;
+        LightZSlider.Value = direction.Z;
+
+        // Update display text
+        LightXText.Text = direction.X.ToString("F2");
+        LightYText.Text = direction.Y.ToString("F2");
+        LightZText.Text = direction.Z.ToString("F2");
+
+        // Update renderer
+        _renderer?.SetLightDirection(direction);
     }
 }
 
