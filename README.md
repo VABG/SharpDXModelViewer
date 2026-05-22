@@ -1,0 +1,2 @@
+# SharpDXModelViewer
+Vibecoding a ModelViewer
