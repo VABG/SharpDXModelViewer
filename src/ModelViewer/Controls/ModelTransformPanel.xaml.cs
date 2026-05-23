@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using ModelViewer.Rendering;
 
 namespace ModelViewer.Controls;
@@ -23,10 +24,37 @@ internal partial class ModelTransformPanel : UserControl
     // ── TextBox formatting ────────────────────────────────────────
     private const string NumberFormat = "F3";
 
+    /// <summary>Whether the panel body is currently expanded.</summary>
+    public bool IsExpanded
+    {
+        get => ContentGrid.Visibility == Visibility.Visible;
+        set
+        {
+            ContentGrid.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            if (CollapseBtn != null)
+                CollapseBtn.Tag = value ? "Expanded" : "Collapsed";
+            // Rotate chevron via RenderTransform
+            if (CollapseBtn != null)
+            {
+                var angle = value ? 0d : -90d;
+                CollapseBtn.RenderTransform = new RotateTransform(angle);
+                CollapseBtn.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+            }
+        }
+    }
+
     public ModelTransformPanel()
     {
         InitializeComponent();
         SetEnabled(false);
+        // Default: collapsed
+        IsExpanded = false;
+    }
+
+    /// <summary>Toggles the panel body visibility.</summary>
+    private void OnCollapseToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        IsExpanded = !IsExpanded;
     }
 
     // ══════════════════════════════════════════════════════════════

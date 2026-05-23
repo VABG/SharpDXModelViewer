@@ -2,37 +2,62 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:ClassModifier="internal"
-             Width="200"
+             Width="180"
              Background="#2D2D30">
     <Border Background="#2D2D30" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4">
-        <StackPanel Margin="10">
-            <TextBlock Text="Light Direction" Foreground="White"
-                       FontWeight="Bold" FontSize="14" Margin="0,0,0,10" />
+        <DockPanel>
 
-            <!-- Yaw component -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-                <TextBlock Text="Yaw:" Foreground="#CCCCCC" FontSize="12" Width="35" />
-                <TextBlock x:Name="YawText" Text="45°" Foreground="#CCCCCC" FontSize="12" />
-            </StackPanel>
-            <Slider x:Name="YawSlider" Minimum="-180" Maximum="180" Value="45"
-                    TickFrequency="5" IsSnapToTickEnabled="True"
-                    ValueChanged="OnSlider_ValueChanged" Margin="0,0,0,8" />
+            <!-- ── Collapsible Header ── -->
+            <Border DockPanel.Dock="Top" Background="#252528"
+                    BorderBrush="#3F3F46" BorderThickness="0,0,0,1"
+                    Padding="6,5">
+                <DockPanel>
+                    <!-- Collapse toggle (right side) -->
+                    <Button x:Name="CollapseBtn"
+                            Style="{StaticResource CollapseToggleButtonStyle}"
+                            Click="OnCollapseToggle_Click"
+                            DockPanel.Dock="Right"
+                            Width="18" Height="18"
+                            Tag="Expanded"/>
+                    <!-- Title -->
+                    <TextBlock Text="Light" Foreground="White"
+                               FontWeight="SemiBold" FontSize="12"
+                               VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
 
-            <!-- Pitch component -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-                <TextBlock Text="Pitch:" Foreground="#CCCCCC" FontSize="12" Width="35" />
-                <TextBlock x:Name="PitchText" Text="45°" Foreground="#CCCCCC" FontSize="12" />
-            </StackPanel>
-            <Slider x:Name="PitchSlider" Minimum="0" Maximum="180" Value="45"
-                    TickFrequency="5" IsSnapToTickEnabled="True"
-                    ValueChanged="OnSlider_ValueChanged" Margin="0,0,0,8" />
+            <!-- ── Collapsible Body ── -->
+            <Grid x:Name="ContentGrid" Visibility="Visible">
+                <StackPanel Margin="8,6">
 
-            <Separator Background="#3F3F46" Margin="0,8" />
+                    <!-- Yaw component -->
+                    <TextBlock Text="Yaw:" Foreground="#CCCCCC" FontSize="11" Margin="0,0,0,2" />
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="YawText" Text="45°" Foreground="#CCCCCC"
+                                   FontSize="10" DockPanel.Dock="Right" />
+                        <Slider x:Name="YawSlider" Minimum="-180" Maximum="180" Value="45"
+                                TickFrequency="5" IsSnapToTickEnabled="True"
+                                ValueChanged="OnSlider_ValueChanged" Height="16" />
+                    </DockPanel>
 
-            <TextBlock Text="Direction preview:" Foreground="#999999"
-                       FontSize="11" Margin="0,0,0,4" />
-            <TextBlock x:Name="DirectionPreview" Text="X: 0.58, Y: -0.58, Z: 0.58"
-                       Foreground="#AAAAAA" FontSize="11" TextWrapping="Wrap" />
-        </StackPanel>
+                    <!-- Pitch component -->
+                    <TextBlock Text="Pitch:" Foreground="#CCCCCC" FontSize="11" Margin="0,0,0,2" />
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="PitchText" Text="45°" Foreground="#CCCCCC"
+                                   FontSize="10" DockPanel.Dock="Right" />
+                        <Slider x:Name="PitchSlider" Minimum="0" Maximum="180" Value="45"
+                                TickFrequency="5" IsSnapToTickEnabled="True"
+                                ValueChanged="OnSlider_ValueChanged" Height="16" />
+                    </DockPanel>
+
+                    <Separator Background="#3F3F46" Margin="0,4" />
+
+                    <TextBlock Text="Direction:" Foreground="#999999"
+                               FontSize="10" Margin="0,2,0,2" />
+                    <TextBlock x:Name="DirectionPreview" Text="X: 0.58, Y: -0.58, Z: 0.58"
+                               Foreground="#AAAAAA" FontSize="10" TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </DockPanel>
     </Border>
 </UserControl>

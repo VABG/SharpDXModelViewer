@@ -29,12 +29,40 @@ internal partial class SceneModelPanel : UserControl
     /// <summary>Set this to bind the ListBox to the live model collection.</summary>
     public ObservableCollection<SceneModel> Models { get; set; } = new();
 
+    /// <summary>Whether the panel body is currently expanded.</summary>
+    public bool IsExpanded
+    {
+        get => ContentGrid.Visibility == Visibility.Visible;
+        set
+        {
+            ContentGrid.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            if (CollapseBtn != null)
+                CollapseBtn.Tag = value ? "Expanded" : "Collapsed";
+            // Rotate chevron via RenderTransform
+            if (CollapseBtn != null)
+            {
+                var angle = value ? 0d : -90d;
+                CollapseBtn.RenderTransform =
+                    new System.Windows.Media.RotateTransform(angle);
+                CollapseBtn.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+            }
+        }
+    }
+
     public SceneModelPanel()
     {
         InitializeComponent();
         ModelListBox.ItemsSource = Models;
         ModelListBox.PreviewKeyDown += OnPreviewKeyDown;
         ModelListBox.SelectionChanged += OnModelListBoxSelectionChanged;
+        // Default: collapsed
+        IsExpanded = false;
+    }
+
+    /// <summary>Toggles the panel body visibility.</summary>
+    private void OnCollapseToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        IsExpanded = !IsExpanded;
     }
 
     /// <summary>

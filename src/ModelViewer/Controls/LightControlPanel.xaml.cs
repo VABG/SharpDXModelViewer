@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using SharpDX;
 
 namespace ModelViewer.Controls;
@@ -16,9 +17,36 @@ internal partial class LightControlPanel : UserControl
     /// </summary>
     public event Action<Vector3>? LightDirectionChanged;
 
+    /// <summary>Whether the panel body is currently expanded.</summary>
+    public bool IsExpanded
+    {
+        get => ContentGrid.Visibility == Visibility.Visible;
+        set
+        {
+            ContentGrid.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            if (CollapseBtn != null)
+                CollapseBtn.Tag = value ? "Expanded" : "Collapsed";
+            // Rotate chevron via RenderTransform
+            if (CollapseBtn != null)
+            {
+                var angle = value ? 0d : -90d;
+                CollapseBtn.RenderTransform = new RotateTransform(angle);
+                CollapseBtn.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+            }
+        }
+    }
+
     public LightControlPanel()
     {
         InitializeComponent();
+        // Default: collapsed
+        IsExpanded = false;
+    }
+
+    /// <summary>Toggles the panel body visibility.</summary>
+    private void OnCollapseToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        IsExpanded = !IsExpanded;
     }
 
     private void OnSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

@@ -173,6 +173,40 @@
         <Setter Property="Background" Value="#3F3F46"/>
     </Style>
 
+        <!-- ======================== Collapse Toggle Button ======================== -->
+    <Style x:Key="CollapseToggleButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="#AAAAAA"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderThickness="0">
+                        <Path x:Name="Chevron"
+                              Data="M 2 0 L 6 4 L 2 8"
+                              Stroke="{TemplateBinding Foreground}"
+                              StrokeThickness="1.5"
+                              StrokeLineJoin="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeStartLineCap="Round"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ======================== Button Style ======================== -->
     <Style TargetType="Button">
         <Setter Property="Background" Value="#3F3F46"/>
