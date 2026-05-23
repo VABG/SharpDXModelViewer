@@ -8,8 +8,8 @@ namespace ModelViewer.Rendering;
 /// </summary>
 public class Camera
 {
-    private float _distance = 20.0f;
-    private float _pitch = MathF.PI / 4;
+    private float _distance = 50.0f;
+    private float _pitch = MathF.PI / 6;
     private float _yaw = MathF.PI / 4;
 
     private Vector3 _target = Vector3.Zero;
