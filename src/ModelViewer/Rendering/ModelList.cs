@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using SharpDX.Direct3D11;
 
 namespace ModelViewer.Rendering;
@@ -10,6 +11,12 @@ public class ModelList : IDisposable
 {
     private readonly object _lock = new();
     private readonly List<SceneModel> _models = new();
+
+    /// <summary>
+    /// Live collection that stays in sync with the internal list.
+    /// Safe for WPF data-binding on the UI thread.
+    /// </summary>
+    public ObservableCollection<SceneModel> ModelsCollection { get; } = new();
 
     /// <summary>
     /// Read-only view of the current models. Safe for the UI thread to bind to.
@@ -55,6 +62,7 @@ public class ModelList : IDisposable
         lock (_lock)
         {
             _models.Add(sceneModel);
+            ModelsCollection.Add(sceneModel);
         }
 
         OnModelsChanged?.Invoke(this);
@@ -74,6 +82,7 @@ public class ModelList : IDisposable
                 return false;
 
             _models.Remove(sceneModel);
+            ModelsCollection.Remove(sceneModel);
         }
 
         sceneModel.Dispose();
@@ -93,6 +102,7 @@ public class ModelList : IDisposable
 
             var sceneModel = _models[index];
             _models.RemoveAt(index);
+            ModelsCollection.Remove(sceneModel);
             sceneModel.Dispose();
         }
 
@@ -122,6 +132,7 @@ public class ModelList : IDisposable
                 model.Dispose();
 
             _models.Clear();
+            ModelsCollection.Clear();
         }
 
         OnModelsChanged?.Invoke(this);

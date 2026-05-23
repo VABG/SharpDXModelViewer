@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Input;
 using Microsoft.Win32;
 using ModelViewer.Rendering;
 using SharpDX;
@@ -13,6 +14,7 @@ namespace ModelViewer;
 public partial class MainWindow : Window
 {
     private Renderer? _renderer;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -41,6 +43,12 @@ public partial class MainWindow : Window
                 Dispatcher.Invoke(() => FpsText.Text = $"FPS: {fps}");
             };
 
+            // Bind the ListBox to the live ObservableCollection of scene models
+            ModelListBox.ItemsSource = _renderer.ModelList.ModelsCollection;
+
+            // Wire up keyboard shortcut: Delete key removes selected model
+            ModelListBox.PreviewKeyDown += ModelListBox_PreviewKeyDown;
+
             StatusText.Text = "Ready - Open a 3D model to begin";
         }
         catch (Exception ex)
@@ -59,8 +67,85 @@ public partial class MainWindow : Window
         _renderer?.Dispose();
     }
 
+    // ────────────────────────────────────────────────────────────────────
+    //  Model List UI Handlers
+    // ────────────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Open a file dialog to load a 3D model.
+    /// Opens a file dialog to add a 3D model to the scene (append mode).
+    /// </summary>
+    private void AddModel_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "3D Models|*.obj;*.fbx;*.gltf;*.glb;*.dae;*.stl|All Files|*.*",
+            Title = "Add 3D Model to Scene"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            try
+            {
+                _renderer?.AddModel(dialog.FileName);
+                StatusText.Text = $"Added: {System.IO.Path.GetFileName(dialog.FileName)}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load model: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Removes the currently selected model from the scene.
+    /// </summary>
+    private void RemoveSelectedModel_Click(object sender, RoutedEventArgs e)
+    {
+        if (ModelListBox.SelectedItem is SceneModel selectedModel)
+        {
+            _renderer?.RemoveModel(selectedModel);
+            StatusText.Text = $"Removed: {selectedModel.DisplayName}";
+        }
+    }
+
+    /// <summary>
+    /// Removes all models from the scene.
+    /// </summary>
+    private void RemoveAllModels_Click(object sender, RoutedEventArgs e)
+    {
+        if (_renderer == null) return;
+
+        var count = _renderer.ModelList.Count;
+        if (count == 0) return;
+
+        var result = MessageBox.Show(
+            $"Remove all {count} model(s) from the scene?",
+            "Clear Scene",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            _renderer.ModelList.Clear();
+            StatusText.Text = "Scene cleared";
+        }
+    }
+
+    /// <summary>
+    /// Keyboard shortcut: Delete key removes the selected model.
+    /// </summary>
+    private void ModelListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Delete)
+        {
+            RemoveSelectedModel_Click(sender, e);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// Open a file dialog to load a 3D model (legacy: replaces all models).
     /// </summary>
     private void OpenModel_Click(object sender, RoutedEventArgs e)
     {
@@ -136,7 +221,6 @@ public partial class MainWindow : Window
         // Send to renderer
         _renderer?.SetLightDirection(direction);
     }
-
 }
 
 
