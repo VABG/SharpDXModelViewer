@@ -10,13 +10,14 @@ struct VSOutput
 float AmbientGradient(float3 normal)
 {
     float gradient = dot(normal,float3(0,1,0));
-    float gradient2 = dot(normal,float3(0,0,1));
+    float gradient2 = dot(normal,float3(1,0,0));
     gradient *= 0.5;
     gradient += 0.5;
     gradient2 *= 0.5;
     gradient2 += 0.5;
     gradient = lerp(gradient, gradient2, 0.25);
-    return gradient;
+    gradient += .25;
+    return saturate(gradient);
 }
 
 // ── Shadow map texture (bound at t0 during main scene pass) ──
@@ -34,11 +35,26 @@ cbuffer ShadowMatrices : register(b1)
     matrix LightViewProjection;
     float3 LightDirection;       // Direction pointing TO the light source
     float Padding;
+    float PcfRadius;            // PCF sample spread in texels (0 = hard shadows)
+    float ShadowBias;           // Base depth bias to prevent shadow acne
 };
 
 /// <summary>
-/// Computes the shadow factor for a fragment.
+/// Tests a single shadow map sample against the fragment depth.
+/// Returns 1.0 if the fragment is lit, 0.0 if it is in shadow.
+/// </summary>
+float SampleShadowDepth(float2 uv, float depth)
+{
+    // Clamp UV to prevent edge artifacts when PCF samples spill outside the map
+    uv = saturate(uv);
+    float storedDepth = ShadowMapTexture.Sample(ShadowSampler, uv).r;
+    return depth <= storedDepth + ShadowBias ? 1.0f : 0.0f;
+}
+
+/// <summary>
+/// Computes the soft shadow factor using 9-tap Percentage-Closer Filtering (PCF).
 /// Returns 1.0 = fully lit, 0.0 = fully shadowed.
+/// When PcfRadius == 0 the function falls back to a single-sample hard shadow.
 /// </summary>
 float ComputeShadowFactor(float4 lightClipPos)
 {
@@ -54,14 +70,26 @@ float ComputeShadowFactor(float4 lightClipPos)
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
         return 1.0f;
 
-        // ── Read the stored depth at this UV ──
-    float storedDepth = ShadowMapTexture.Sample(ShadowSampler, uv).r;
+    // ── Hard shadow fallback when radius is zero ──
+    if (PcfRadius <= 0.0f)
+        return SampleShadowDepth(uv, ndcPos.z);
 
-    // ── Compare with small bias to prevent shadow acne ──
-    float shadowBias = 0.001;
-    float shadowFactor = ndcPos.z <= storedDepth + shadowBias ? 1.0f : 0.0f;
+    // ── 9-tap PCF: sample a 3×3 grid around the center UV ──
+    float texelSize = 1.0f / 2048.0f;
+    float2 offset = texelSize * PcfRadius;
 
-    return shadowFactor;
+    float shadowSum = 0.0f;
+    shadowSum += SampleShadowDepth(uv + float2(-offset.x, -offset.y), ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2( 0.0f,    -offset.y), ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2( offset.x, -offset.y), ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2(-offset.x,  0.0f),    ndcPos.z);
+    shadowSum += SampleShadowDepth(uv, ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2( offset.x,  0.0f),    ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2(-offset.x,  offset.y), ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2( 0.0f,     offset.y), ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2( offset.x,  offset.y), ndcPos.z);
+
+    return shadowSum / 9.0f;
 }
 
 float4 PSMain(VSOutput input) : SV_TARGET
