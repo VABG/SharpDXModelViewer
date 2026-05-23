@@ -11,6 +11,12 @@ cbuffer LightMatrices : register(b0)
     float Padding;
 };
 
+// ── Per-object world transform (bound at b2 for each draw call) ──
+cbuffer WorldMatrix : register(b2)
+{
+    matrix World;
+};
+
 struct VSInput
 {
     float3 Position : POSITION;
@@ -30,11 +36,12 @@ VSOutput VSMain(VSInput input)
 {
     VSOutput output;
     // Transform world-space position into light clip-space
-    float4 worldPos = float4(input.Position, 1.0);
+    float4 worldPos = mul(float4(input.Position, 1.0), World);
     output.Position = mul(worldPos, LightViewProjection);
     
-    output.WorldNormal = input.Normal;
-    output.WorldPos = input.Position;
+    output.WorldNormal = mul(input.Normal, (float3x3)World);
+    output.WorldPos = worldPos.xyz;
     output.TexCoord = input.TexCoord;
     return output;
 }
+

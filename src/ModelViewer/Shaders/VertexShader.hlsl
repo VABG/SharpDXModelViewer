@@ -12,6 +12,12 @@ cbuffer ShadowMatrices : register(b1)
     float Padding;               // Alignment padding
 };
 
+// ── Per-object world transform (bound at b2 for each draw call) ──
+cbuffer WorldMatrix : register(b2)
+{
+    matrix World;
+};
+
 struct VSInput
 {
     float3 Position : POSITION;
@@ -32,7 +38,12 @@ struct VSOutput
 VSOutput VSMain(VSInput input)
 {
     VSOutput output;
-    float4 worldPos = float4(input.Position, 1.0);
+
+    // ── Transform to world space using per-object world matrix ──
+    float4 worldPos = mul(float4(input.Position, 1.0), World);
+
+    // Transform normal by upper-left 3×3 of world matrix (assumes uniform scale)
+    output.WorldNormal = mul(input.Normal, (float3x3)World);
 
     // ── Camera space (existing) ──
     output.Position = mul(worldPos, View);
@@ -41,8 +52,7 @@ VSOutput VSMain(VSInput input)
     // ── Light space (new) ──
     output.LightClipPos = mul(worldPos, LightViewProjection);
 
-    output.WorldNormal = input.Normal;
-    output.WorldPos = input.Position;
+    output.WorldPos = worldPos.xyz;
     output.TexCoord = input.TexCoord;
     return output;
 }

@@ -17,9 +17,15 @@ public class Model : IDisposable
     private int _indexCount;
     private bool _disposed;
 
-    public int IndexCount => _indexCount;
+        public int IndexCount => _indexCount;
     public SharpDX.Direct3D11.Buffer? VertexBuffer => _vertexBuffer;
     public SharpDX.Direct3D11.Buffer? IndexBuffer => _indexBuffer;
+
+    /// <summary>
+    /// Model-space transform for this model (position, rotation, scale).
+    /// Mutate this from the render thread before the next frame renders.
+    /// </summary>
+    public ModelTransform Transform { get; set; } = ModelTransform.Identity;
 
     /// <summary>
     /// Loads a 3D model file and creates D3D11 vertex/index buffers.

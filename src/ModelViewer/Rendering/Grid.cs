@@ -17,6 +17,12 @@ public class Grid : IDisposable
     private bool _disposed;
 
     /// <summary>
+    /// Model-space transform for this grid (position, rotation, scale).
+    /// Mutate this from the render thread before the next frame renders.
+    /// </summary>
+    public ModelTransform Transform { get; set; } = ModelTransform.Identity;
+
+    /// <summary>
     /// Number of divisions along each axis (grid will have divisionsCount + 1 lines per axis).
     /// </summary>
     public int DivisionsCount { get; }

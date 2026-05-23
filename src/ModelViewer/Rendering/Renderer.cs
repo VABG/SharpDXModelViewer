@@ -27,11 +27,14 @@ public class Renderer : IDisposable
     private ShaderSignature? _inputSignature;
     private readonly SharpDX.Direct3D11.Buffer? _viewProjectionBuffer;
 
-    // ── Shadow map resources ──
+        // ── Shadow map resources ──
     private ShadowMap? _shadowMap;
     private VertexShader? _shadowVertexShader;
     private PixelShader? _shadowPixelShader;
     private SharpDX.Direct3D11.Buffer? _shadowConstantBuffer;
+
+    // ── World matrix constant buffer (cbuffer b2) ──
+    private SharpDX.Direct3D11.Buffer? _worldMatrixBuffer;
 
     // Scene state
     private Model? _currentModel;
@@ -99,7 +102,18 @@ public class Renderer : IDisposable
             CpuAccessFlags = CpuAccessFlags.Write,
             OptionFlags = ResourceOptionFlags.None,
         };
-        _shadowConstantBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, shadowCbDesc);
+                _shadowConstantBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, shadowCbDesc);
+
+                // ── Create world matrix constant buffer (cbuffer b2, one 4×4 matrix = 64 bytes) ──
+        var worldCbDesc = new BufferDescription
+        {
+            SizeInBytes = Marshal.SizeOf<Matrix>(),
+            Usage = ResourceUsage.Dynamic,
+            BindFlags = BindFlags.ConstantBuffer,
+            CpuAccessFlags = CpuAccessFlags.Write,
+            OptionFlags = ResourceOptionFlags.None,
+        };
+        _worldMatrixBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, worldCbDesc);
 
         // Create reference grid visible even when no model is loaded
         _grid = Grid.Create(_deviceManager.Device, size: 200.0f, divisionsCount: 20);
@@ -205,10 +219,29 @@ public class Renderer : IDisposable
             }
         }
 
-    private void StartRenderLoop()
+        private void StartRenderLoop()
     {
         _fpsWatch.Restart();
         _renderLoopTask = Task.Run(() => RenderLoop(_cts.Token));
+    }
+
+    /// <summary>
+    /// Uploads a model-space world matrix to the GPU constant buffer at slot b2.
+    /// Call once per draw with the object's current transform.
+    /// </summary>
+    private void UploadWorldMatrix(DeviceContext context, ModelTransform transform)
+    {
+        if (_worldMatrixBuffer == null) return;
+
+        var world = transform.ToMatrix();
+        world.Transpose();
+
+        context.MapSubresource(_worldMatrixBuffer, MapMode.WriteDiscard,
+            MapFlags.None, out var map);
+        Marshal.StructureToPtr(world, map.DataPointer, false);
+        context.UnmapSubresource(_worldMatrixBuffer, 0);
+
+        context.VertexShader.SetConstantBuffer(2, _worldMatrixBuffer);
     }
 
     private void RenderLoop(CancellationToken token)
@@ -275,8 +308,15 @@ public class Renderer : IDisposable
                 context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
                 context.ClearDepthStencilView(depthStencilView, DepthStencilClearFlags.Depth, 1.0f, 0);
 
-                                // ── Camera ─────────────────────────────────────────────────────
+                                                                // ── Camera ─────────────────────────────────────────────────────
                 _camera.UpdateProjection(width, height);
+
+                // ── Update model transforms ─────────────────────────────────────
+                // Slow Y-axis rotation on the grid so transforms are visibly tested
+                const float gridRotationSpeed = 0.15f; // radians per second
+                float dt = 1f / 60f; // approximate frame delta
+                _grid!.Transform = _grid.Transform.WithRotationAdded(
+                    new Vector3(0, gridRotationSpeed * dt, 0));
 
                                 // ═══════════════════════════════════════════════════════════════
                 //  SHADOW MAP DEPTH PASS
@@ -308,9 +348,11 @@ public class Renderer : IDisposable
                     context.PixelShader.Set(_shadowPixelShader);
                     context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
 
-                    // ── Draw grid into shadow map ──
+                                        // ── Draw grid into shadow map ──
                     if (_grid != null && _grid.VertexBuffer != null && _grid.IndexBuffer != null)
                     {
+                        UploadWorldMatrix(context, _grid.Transform);
+
                         var stride = VertexPositionNormalTexture.SizeInBytes;
                         context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
                             _grid.VertexBuffer, stride, 0));
@@ -324,6 +366,8 @@ public class Renderer : IDisposable
                     // ── Draw model into shadow map ──
                     if (_currentModel != null && _currentModel.VertexBuffer != null && _currentModel.IndexBuffer != null)
                     {
+                        UploadWorldMatrix(context, _currentModel.Transform);
+
                         var stride = VertexPositionNormalTexture.SizeInBytes;
                         context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
                             _currentModel.VertexBuffer, stride, 0));
@@ -385,9 +429,11 @@ public class Renderer : IDisposable
                 context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
                 context.Rasterizer.State = _deviceManager.RasterizerState;
 
-                // ── Draw grid (always visible) ─────────────────────────────────
+                                // ── Draw grid (always visible) ─────────────────────────────────
                 if (_grid != null && _grid.VertexBuffer != null && _grid.IndexBuffer != null)
                 {
+                    UploadWorldMatrix(context, _grid.Transform);
+
                     var stride = VertexPositionNormalTexture.SizeInBytes;
                     var offset = 0;
 
@@ -403,6 +449,8 @@ public class Renderer : IDisposable
                 // ── Draw model ─────────────────────────────────────────────────
                 if (_currentModel != null && _currentModel.VertexBuffer != null && _currentModel.IndexBuffer != null)
                 {
+                    UploadWorldMatrix(context, _currentModel.Transform);
+
                     var stride = VertexPositionNormalTexture.SizeInBytes;
                     var offset = 0;
 
@@ -470,6 +518,7 @@ public class Renderer : IDisposable
         _shadowVertexShader?.Dispose();
         _shadowPixelShader?.Dispose();
         _shadowConstantBuffer?.Dispose();
+        _worldMatrixBuffer?.Dispose();
         _inputLayout?.Dispose();
         _vertexShader?.Dispose();
         _pixelShader?.Dispose();
