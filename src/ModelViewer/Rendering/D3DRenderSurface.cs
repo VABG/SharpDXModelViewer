@@ -200,7 +200,7 @@ public class D3DRenderSurface : HwndHost
                 SwapEffect = SwapEffect.Discard,
                 OutputHandle = _hwnd,
                 ModeDescription = new ModeDescription(0, 0, new Rational(60, 1), Format.R8G8B8A8_UNorm),
-                SampleDescription = new SampleDescription(1, 0),
+                SampleDescription = new SampleDescription(4, 0),
                 Flags = SwapChainFlags.None,
             };
 
