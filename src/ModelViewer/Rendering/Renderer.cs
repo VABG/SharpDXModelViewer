@@ -40,9 +40,11 @@ public class Renderer : IDisposable
     private Model? _currentModel;
     private readonly Grid? _grid;
 
-    // Render loop state
+        // Render loop state
     private readonly CancellationTokenSource _cts = new();
     private Task? _renderLoopTask;
+    private Task? _updateLoopTask;
+    private readonly object _transformLock = new();
     private int _frameCount;
 
     /// <summary>
@@ -119,6 +121,7 @@ public class Renderer : IDisposable
         _grid = Grid.Create(_deviceManager.Device, size: 200.0f, divisionsCount: 20);
 
         _inputHandler = new InputHandler(surface, _camera);
+        StartUpdateLoop();
         StartRenderLoop();
     }
 
@@ -219,10 +222,78 @@ public class Renderer : IDisposable
             }
         }
 
-        private void StartRenderLoop()
+                private void StartRenderLoop()
     {
         _fpsWatch.Restart();
         _renderLoopTask = Task.Run(() => RenderLoop(_cts.Token));
+    }
+
+    /// <summary>
+    /// Starts a dedicated update loop that runs on its own thread at ~60 Hz.
+    /// Transforms are updated here so the render loop only reads them (thread-safe via lock).
+    /// </summary>
+    private void StartUpdateLoop()
+    {
+        _updateLoopTask = Task.Run(() => UpdateLoop(_cts.Token));
+    }
+
+        /// <summary>
+    /// Runs every frame to update model transforms, animations, physics, etc.
+    /// Mutations are guarded by _transformLock so the render thread can safely read them.
+    /// </summary>
+    private void UpdateLoop(CancellationToken token)
+    {
+        const int targetIntervalMs = 16; // ~60 Hz
+        long lastTimestamp = Stopwatch.GetTimestamp();
+        double ticksPerMs = (double)Stopwatch.Frequency / 1000.0;
+
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                long now = Stopwatch.GetTimestamp();
+                float dt = MathF.Min((float)((now - lastTimestamp) / ticksPerMs / 1000.0), 0.1f); // clamp to 100ms
+                lastTimestamp = now;
+
+                // ── Update grid transform (slow Y-axis rotation test) ────────────
+                const float gridRotationSpeed = 0.15f; // radians per second
+                lock (_transformLock)
+                {
+                    _grid!.Transform = _grid.Transform.WithRotationAdded(
+                        new Vector3(0, gridRotationSpeed * dt, 0));
+                }
+
+                // Sleep to maintain ~60 Hz cadence
+                Thread.Sleep(targetIntervalMs);
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
+            }
+            catch (SharpDXException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Update error: {ex.Message}");
+                Thread.Sleep(16);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Thread-safe snapshot of the grid's current transform.
+    /// </summary>
+    private ModelTransform GetGridTransform()
+    {
+        lock (_transformLock)
+            return _grid!.Transform;
+    }
+
+        /// <summary>
+    /// Thread-safe snapshot of the current model's transform (if loaded).
+    /// </summary>
+    private ModelTransform GetModelTransform()
+    {
+        lock (_transformLock)
+            return _currentModel?.Transform ?? ModelTransform.Identity;
     }
 
     /// <summary>
@@ -309,14 +380,7 @@ public class Renderer : IDisposable
                 context.ClearDepthStencilView(depthStencilView, DepthStencilClearFlags.Depth, 1.0f, 0);
 
                                                                 // ── Camera ─────────────────────────────────────────────────────
-                _camera.UpdateProjection(width, height);
-
-                // ── Update model transforms ─────────────────────────────────────
-                // Slow Y-axis rotation on the grid so transforms are visibly tested
-                const float gridRotationSpeed = 0.15f; // radians per second
-                float dt = 1f / 60f; // approximate frame delta
-                _grid!.Transform = _grid.Transform.WithRotationAdded(
-                    new Vector3(0, gridRotationSpeed * dt, 0));
+                                _camera.UpdateProjection(width, height);
 
                                 // ═══════════════════════════════════════════════════════════════
                 //  SHADOW MAP DEPTH PASS
@@ -348,10 +412,10 @@ public class Renderer : IDisposable
                     context.PixelShader.Set(_shadowPixelShader);
                     context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
 
-                                        // ── Draw grid into shadow map ──
+                    // ── Draw grid into shadow map ──
                     if (_grid != null && _grid.VertexBuffer != null && _grid.IndexBuffer != null)
                     {
-                        UploadWorldMatrix(context, _grid.Transform);
+                        UploadWorldMatrix(context, GetGridTransform());
 
                         var stride = VertexPositionNormalTexture.SizeInBytes;
                         context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
@@ -366,7 +430,7 @@ public class Renderer : IDisposable
                     // ── Draw model into shadow map ──
                     if (_currentModel != null && _currentModel.VertexBuffer != null && _currentModel.IndexBuffer != null)
                     {
-                        UploadWorldMatrix(context, _currentModel.Transform);
+                        UploadWorldMatrix(context, GetModelTransform());
 
                         var stride = VertexPositionNormalTexture.SizeInBytes;
                         context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
@@ -429,10 +493,10 @@ public class Renderer : IDisposable
                 context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
                 context.Rasterizer.State = _deviceManager.RasterizerState;
 
-                                // ── Draw grid (always visible) ─────────────────────────────────
+                                                                // ── Draw grid (always visible) ─────────────────────────────────
                 if (_grid != null && _grid.VertexBuffer != null && _grid.IndexBuffer != null)
                 {
-                    UploadWorldMatrix(context, _grid.Transform);
+                    UploadWorldMatrix(context, GetGridTransform());
 
                     var stride = VertexPositionNormalTexture.SizeInBytes;
                     var offset = 0;
@@ -446,10 +510,10 @@ public class Renderer : IDisposable
                     context.DrawIndexed(_grid.IndexCount, 0, 0);
                 }
 
-                // ── Draw model ─────────────────────────────────────────────────
+                                // ── Draw model ─────────────────────────────────────────────────
                 if (_currentModel != null && _currentModel.VertexBuffer != null && _currentModel.IndexBuffer != null)
                 {
-                    UploadWorldMatrix(context, _currentModel.Transform);
+                    UploadWorldMatrix(context, GetModelTransform());
 
                     var stride = VertexPositionNormalTexture.SizeInBytes;
                     var offset = 0;
@@ -507,9 +571,10 @@ public class Renderer : IDisposable
     }
 
     public void Dispose()
-    {
+        {
         _cts.Cancel();
         _renderLoopTask?.Wait(2000);
+        _updateLoopTask?.Wait(2000);
 
         _inputHandler.Dispose();
         _currentModel?.Dispose();
