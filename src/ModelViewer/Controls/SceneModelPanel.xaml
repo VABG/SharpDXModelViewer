@@ -18,6 +18,15 @@
                 </StackPanel>
             </Border>
 
+                        <!-- Remove button at the bottom -->
+            <Button Content="🗑️ Remove Selected"
+                    DockPanel.Dock="Bottom"
+                    Click="OnRemoveSelected_Click"
+                    Margin="8,4,8,6"
+                    Padding="4,2"
+                    FontSize="11"
+                    Height="24" />
+
             <!-- Model list -->
             <ListBox x:Name="ModelListBox"
                      Background="#2D2D30"
@@ -51,12 +60,6 @@
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
-
-            <!-- Remove button at the bottom -->
-            <Button Content="🗑️ Remove Selected"
-                    DockPanel.Dock="Bottom"
-                    Click="OnRemoveSelected_Click"
-                    Margin="8,8,8,8" />
         </DockPanel>
     </Border>
 </UserControl>
