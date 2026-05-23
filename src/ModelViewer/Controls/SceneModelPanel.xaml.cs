@@ -33,6 +33,16 @@ internal partial class SceneModelPanel : UserControl
         ModelListBox.PreviewKeyDown += OnPreviewKeyDown;
     }
 
+    /// <summary>
+    /// Replaces the bound collection and rebinds the ListBox so the UI
+    /// reflects the new source immediately.
+    /// </summary>
+    public void BindModels(ObservableCollection<SceneModel> collection)
+    {
+        Models = collection;
+        ModelListBox.ItemsSource = collection;
+    }
+
     // ── File-dialog + Add ──────────────────────────────────────────────
 
     private void OnAddModel_Click(object sender, RoutedEventArgs e)
@@ -86,3 +96,4 @@ internal partial class SceneModelPanel : UserControl
         }
     }
 }
+

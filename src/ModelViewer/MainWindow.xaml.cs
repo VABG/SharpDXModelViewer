@@ -43,7 +43,7 @@ public partial class MainWindow : Window
             };
 
                                     // ── Wire up scene-model panel ───────────────────────────────
-            ScenePanel.Models = _renderer.ModelList.ModelsCollection;
+            ScenePanel.BindModels(_renderer.ModelList.ModelsCollection);
             ScenePanel.ModelFileRequested += OnModelFileRequested;
             ScenePanel.ModelRemovalRequested += OnModelRemovalRequested;
             ScenePanel.ClearSceneRequested += OnClearSceneRequested;
