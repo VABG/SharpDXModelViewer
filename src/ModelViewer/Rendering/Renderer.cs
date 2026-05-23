@@ -60,8 +60,6 @@ public class Renderer : IDisposable
     }
 
     private readonly Stopwatch _fpsWatch = new();
-    private int _lastWidth;
-    private int _lastHeight;
 
     /// <summary>
     /// Callback invoked once per second with the current FPS.
@@ -244,8 +242,8 @@ public class Renderer : IDisposable
     private void UpdateLoop(CancellationToken token)
     {
         const int targetIntervalMs = 16; // ~60 Hz
-        long lastTimestamp = Stopwatch.GetTimestamp();
-        double ticksPerMs = (double)Stopwatch.Frequency / 1000.0;
+        var lastTimestamp = Stopwatch.GetTimestamp();
+        var ticksPerMs = Stopwatch.Frequency / 1000.0;
 
         while (!token.IsCancellationRequested)
         {
@@ -264,7 +262,7 @@ public class Renderer : IDisposable
             }
             catch (SharpDXException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Update error: {ex.Message}");
+                Debug.WriteLine($"Update error: {ex.Message}");
                 Thread.Sleep(16);
             }
         }
@@ -341,8 +339,6 @@ public class Renderer : IDisposable
                     //   3. ResizeBuffers (now safe — no live references)
                     //   4. Create new RTV + depth stencil from new back buffer
                     _deviceManager.Resize(newWidth, newHeight);
-                    _lastWidth = newWidth;
-                    _lastHeight = newHeight;
                 }
 
                 // ── Query back buffer dimensions ───────────────────────────────
@@ -420,11 +416,8 @@ public class Renderer : IDisposable
                     context.VertexShader.Set(_shadowVertexShader);
                     context.PixelShader.Set(_shadowPixelShader);
                     context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
-
-                    // ── Draw grid into shadow map ──
-                    DrawObject(context, _grid!);
-
-                                        // ── Draw all scene models into shadow map ──
+                    
+                    // ── Draw all scene models into shadow map ──
                     foreach (var sm in snapshot)
                         DrawObject(context, sm);
                 }

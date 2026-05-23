@@ -15,7 +15,7 @@ public class Camera
     private Vector3 _target = Vector3.Zero;
 
     public float MinDistance { get; set; } = 0.1f;
-    public float MaxDistance { get; set; } = 100.0f;
+    public float MaxDistance { get; set; } = 500.0f;
 
     /// <summary>
     /// Gets the current view matrix.
