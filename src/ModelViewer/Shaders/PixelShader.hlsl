@@ -77,9 +77,8 @@ float2 RandomFloat2(float2 uv, float seed)
 /// Returns 1.0 = fully lit, 0.0 = fully shadowed.
 /// When PcfRadius == 0 the function falls back to a single-sample hard shadow.
 /// </summary>
-float ComputeShadowFactor(float4 lightClipPos, float dot)
+float ComputeShadowFactor(float4 lightClipPos)
 {
-    float normalOffset = 1 - dot;
     // ── Perspective divide to get NDC coordinates ──
     float3 ndcPos = lightClipPos.xyz / lightClipPos.w;
 
@@ -101,7 +100,7 @@ float ComputeShadowFactor(float4 lightClipPos, float dot)
     float texelSize = 1.0f / 2048.0f;
     float2 offset = texelSize * PcfRadius;
 
-    float calculatedDepth = ndcPos.z - (normalOffset * ShadowBias + ShadowBias);
+    float calculatedDepth = ndcPos.z - ShadowBias;
 
     float shadowSum = 0.0f;
 
@@ -135,7 +134,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
     float3 diffuse = lightColor * diffuseColor * betterLambert;
 
     // ── Apply shadow factor to diffuse lighting ──
-    float shadow = ComputeShadowFactor(input.LightClipPos, NdotL);
+    float shadow = ComputeShadowFactor(input.LightClipPos);
     diffuse *= shadow;
 
     float3 color = ambientColor + diffuse;

@@ -43,14 +43,20 @@ VSOutput VSMain(VSInput input)
     float4 worldPos = mul(float4(input.Position, 1.0), World);
 
     // Transform normal by upper-left 3×3 of world matrix (assumes uniform scale)
-    output.WorldNormal = mul(input.Normal, (float3x3)World);
+    float3 worldNormal = mul(input.Normal, (float3x3)World);
+    output.WorldNormal = worldNormal;
 
     // ── Camera space (existing) ──
     output.Position = mul(worldPos, View);
     output.Position = mul(output.Position, Projection);
 
     // ── Light space (new) ──
-    output.LightClipPos = mul(worldPos, LightViewProjection);
+    float normalOffset = saturate(dot(output.WorldNormal, LightDirection));
+    
+    float4 worldPosLight = worldPos;
+    worldPosLight.xyz += worldNormal * normalOffset * 0.05;
+    
+    output.LightClipPos = mul(worldPosLight, LightViewProjection);
 
     output.WorldPos = worldPos.xyz;
     output.TexCoord = input.TexCoord;

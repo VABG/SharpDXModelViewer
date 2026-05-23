@@ -56,7 +56,7 @@ public class Renderer : IDisposable
 
         // ShadowMap.UpdateLightCamera expects the direction the light shines FROM.
         // It internally negates it to store the direction pointing TO the light.
-        _shadowMap.UpdateLightCamera(direction, sceneRadius: 100f, sceneHeight: 50f);
+        _shadowMap.UpdateLightCamera(direction, sceneRadius: 150f, sceneHeight: 100f);
     }
 
     private readonly Stopwatch _fpsWatch = new();

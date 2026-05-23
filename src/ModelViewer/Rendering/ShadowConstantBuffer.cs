@@ -27,7 +27,7 @@ public struct ShadowConstantBuffer
     public float _pad1;                // 4 bytes (pad to 16-byte boundary)
 
     public ShadowConstantBuffer(Matrix lightViewProj, Vector3 lightDir,
-        float pcfRadius = 2.0f, float shadowBias = 0.002f)
+        float pcfRadius = 1.0f, float shadowBias = 0.002f)
     {
         LightViewProjection = lightViewProj;
         LightDirection = lightDir;
