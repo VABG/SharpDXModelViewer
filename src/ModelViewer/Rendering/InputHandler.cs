@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+
 namespace ModelViewer.Rendering;
 
 /// <summary>
@@ -15,6 +16,7 @@ public class InputHandler : IDisposable
     private readonly D3DRenderSurface _surface;
 
     private bool _isLeftMouseDown;
+    private bool _isMiddleMouseDown;
     private bool _isRightMouseDown;
     private Point _lastMousePosition;
     private bool _disposed;
@@ -50,6 +52,11 @@ public class InputHandler : IDisposable
             _isLeftMouseDown = true;
             _lastMousePosition = pos;
         }
+        else if (e.ChangedButton == MouseButton.Middle)
+        {
+            _isMiddleMouseDown = true;
+            _lastMousePosition = pos;
+        }
         else if (e.ChangedButton == MouseButton.Right)
         {
             _isRightMouseDown = true;
@@ -64,9 +71,10 @@ public class InputHandler : IDisposable
     {
         if (e.ChangedButton == MouseButton.Left)
             _isLeftMouseDown = false;
+        else if (e.ChangedButton == MouseButton.Middle)
+            _isMiddleMouseDown = false;
         else if (e.ChangedButton == MouseButton.Right)
             _isRightMouseDown = false;
-
         e.Handled = true;
     }
 
@@ -76,7 +84,7 @@ public class InputHandler : IDisposable
         var deltaX = (float)(currentPos.X - _lastMousePosition.X);
         var deltaY = (float)(currentPos.Y - _lastMousePosition.Y);
 
-        if (_isLeftMouseDown && (deltaX != 0 || deltaY != 0))
+        if (_isMiddleMouseDown && (deltaX != 0 || deltaY != 0))
             _camera.OnRotate(deltaX, deltaY);
         else if (_isRightMouseDown)
             _camera.OnPan(deltaX, deltaY);
@@ -101,4 +109,3 @@ public class InputHandler : IDisposable
         _surface.MouseWheel -= _wheelHandler;
     }
 }
-
