@@ -57,7 +57,7 @@ public class Camera
         UpdateViewMatrix();
     }
 
-    private float PanSensitivity { get; set; } = 0.005f;
+    private float PanSensitivity { get; set; } = 0.0025f;
 
     public Camera()
     {
