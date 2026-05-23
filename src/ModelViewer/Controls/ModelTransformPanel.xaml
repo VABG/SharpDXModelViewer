@@ -183,11 +183,19 @@
                                 </StackPanel>
                             </StackPanel>
                         </WrapPanel>
-                        <!-- Reset button -->
-                        <Button Content="↺ Reset"
-                                Click="OnResetTransform_Click"
-                                Margin="5" Padding="6,3"
-                                FontSize="11" Height="24" />
+                        <WrapPanel>
+                            <!-- Reset button -->
+                            <Button Content="↺ Reset"
+                                    Click="OnResetTransform_Click"
+                                    Margin="5" Padding="6,3"
+                                    FontSize="11" Height="24" />
+                            <!-- Place on Ground button -->
+                            <Button Content="⬇ Place on Ground"
+                                    Click="OnPlaceOnGround_Click"
+                                    Margin="5" Padding="6,3"
+                                    FontSize="11" Height="24" />
+                        </WrapPanel>
+
                     </StackPanel>
 
 

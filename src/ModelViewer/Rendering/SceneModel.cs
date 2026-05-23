@@ -25,6 +25,9 @@ public class SceneModel : IDrawableObject, IDisposable
     /// <summary>The underlying D3D model resource.</summary>
     public Model Model => _model;
 
+    /// <summary>AABB bounding box of the model in its original (model-space) coordinates.</summary>
+    public BoundingBox BoundingBox => _model.BoundingBox;
+
     // ── IDrawableObject — delegates buffer access to inner Model ──────
 
     /// <inheritdoc />
@@ -67,3 +70,4 @@ public class SceneModel : IDrawableObject, IDisposable
         _model.Dispose();
     }
 }
+

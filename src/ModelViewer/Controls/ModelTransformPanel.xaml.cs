@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using ModelViewer.Rendering;
+using SharpDX;
 
 namespace ModelViewer.Controls;
 
@@ -182,6 +183,31 @@ internal partial class ModelTransformPanel : UserControl
     private void OnScaleText_KeyDown(object? sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == System.Windows.Input.Key.Enter) CommitTransform();
+    }
+
+        // ══════════════════════════════════════════════════════════════
+    //  Place on Ground — positions the model so its lowest point sits at Z = 0
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnPlaceOnGround_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedModel == null) return;
+
+        var t = _selectedModel.Transform;
+
+                // The bounding box is in model-space (before any transform).
+        // SharpDX BoundingBox stores Center + Extents, so the lowest point is:
+        //   bottomZ = BoundingBox.Center.Z - BoundingBox.Extents.Z
+        // After applying the current scale, the offset from the model's origin
+        // to the bottom is (Origin.Z - bottomZ) * Scale.
+        // We want that bottom to sit at world Z = 0, so:
+        //   newPosition.Z = offsetFromOriginToBottom
+        //   = (Origin.Z - bottomZ) * Scale
+        float bottomY = _selectedModel.BoundingBox.Minimum.Y * t.Scale;
+
+        t.Position.Y = -bottomY;
+        _selectedModel.Transform = t;
+        RefreshFromModel();
     }
 
     // ══════════════════════════════════════════════════════════════

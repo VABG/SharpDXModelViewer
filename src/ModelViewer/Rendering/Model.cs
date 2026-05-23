@@ -21,8 +21,12 @@ public class Model : DrawableObject
     public override SharpDX.Direct3D11.Buffer? VertexBuffer => _vertexBuffer;
     public override SharpDX.Direct3D11.Buffer? IndexBuffer => _indexBuffer;
 
+    /// <summary>AABB bounding box of the model in its original (model-space) coordinates.</summary>
+    public BoundingBox BoundingBox { get; private set; } = default;
+
     /// <summary>
     /// Loads a 3D model file and creates D3D11 vertex/index buffers.
+    /// Also computes the bounding box and centroid origin from geometry.
     /// Supports OBJ, FBX, GLTF, GLB, DAE, and STL formats.
     /// </summary>
     public static Model Load(SharpDX.Direct3D11.Device device, string filePath)
@@ -43,6 +47,10 @@ public class Model : DrawableObject
         var vertices = new List<VertexPositionNormalTexture>();
         var indices = new List<int>();
 
+        // ── Bounding-box / origin accumulators ──
+        var bboxMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        var bboxMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+
         foreach (var mesh in scene.Meshes)
         {
             foreach (var face in mesh.Faces)
@@ -61,20 +69,30 @@ public class Model : DrawableObject
                         ? new Vector2D(mesh.TextureCoordinateChannels[0][vertexIndex].X, mesh.TextureCoordinateChannels[0][vertexIndex].Y)
                         : new Vector2D(0, 0);
 
+                    var pos = new Vector3(vertex.X, vertex.Y, vertex.Z);
+
                     vertices.Add(new VertexPositionNormalTexture(
-                        new Vector3(vertex.X, vertex.Y, vertex.Z),
+                        pos,
                         new Vector3(normal.X, normal.Y, normal.Z),
                         new Vector2(uv.X, uv.Y)
                     ));
 
                     // Use the actual vertex list index as the draw index
                     indices.Add(vertices.Count - 1);
+
+                    // Accumulate bounding box
+                    bboxMin = Vector3.Min(bboxMin, pos);
+                    bboxMax = Vector3.Max(bboxMax, pos);
                 }
             }
         }
 
         var model = new Model();
         model.CreateBuffers(device, vertices, indices);
+
+        // Store bounding box (SharpDX BoundingBox uses Center + Extents)
+        model.BoundingBox = new BoundingBox(bboxMin, bboxMax);
+
         return model;
     }
 
