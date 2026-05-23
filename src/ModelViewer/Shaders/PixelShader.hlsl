@@ -2,15 +2,15 @@ struct VSOutput
 {
     float4 Position : SV_POSITION;
     float3 WorldNormal : NORMAL;
-    float3 WorldPos    : TEXCOORD0;
-    float2 TexCoord    : TEXCOORD1;
-    float4 LightClipPos : TEXCOORD2;  // ── New: light clip-space position ──
+    float3 WorldPos : TEXCOORD0;
+    float2 TexCoord : TEXCOORD1;
+    float4 LightClipPos : TEXCOORD2; // ── New: light clip-space position ──
 };
 
 float AmbientGradient(float3 normal)
 {
-    float gradient = dot(normal,float3(0,1,0));
-    float gradient2 = dot(normal,float3(1,0,0));
+    float gradient = dot(normal, float3(0, 1, 0));
+    float gradient2 = dot(normal, float3(1, 0, 0));
     gradient *= 0.5;
     gradient += 0.5;
     gradient2 *= 0.5;
@@ -33,10 +33,10 @@ SamplerState ShadowSampler : register(s0)
 cbuffer ShadowMatrices : register(b1)
 {
     matrix LightViewProjection;
-    float3 LightDirection;       // Direction pointing TO the light source
+    float3 LightDirection; // Direction pointing TO the light source
     float Padding;
-    float PcfRadius;            // PCF sample spread in texels (0 = hard shadows)
-    float ShadowBias;           // Base depth bias to prevent shadow acne
+    float PcfRadius; // PCF sample spread in texels (0 = hard shadows)
+    float ShadowBias; // Base depth bias to prevent shadow acne
 };
 
 /// <summary>
@@ -48,7 +48,7 @@ float SampleShadowDepth(float2 uv, float depth)
     // Clamp UV to prevent edge artifacts when PCF samples spill outside the map
     uv = saturate(uv);
     float storedDepth = ShadowMapTexture.Sample(ShadowSampler, uv).r;
-    return depth <= storedDepth + ShadowBias ? 1.0f : 0.0f;
+    return depth <= storedDepth ? 1.0f : 0.0f;
 }
 
 /// <summary>
@@ -56,8 +56,9 @@ float SampleShadowDepth(float2 uv, float depth)
 /// Returns 1.0 = fully lit, 0.0 = fully shadowed.
 /// When PcfRadius == 0 the function falls back to a single-sample hard shadow.
 /// </summary>
-float ComputeShadowFactor(float4 lightClipPos)
+float ComputeShadowFactor(float4 lightClipPos, float dot)
 {
+    float normalOffset = 1 - dot;
     // ── Perspective divide to get NDC coordinates ──
     float3 ndcPos = lightClipPos.xyz / lightClipPos.w;
 
@@ -78,16 +79,18 @@ float ComputeShadowFactor(float4 lightClipPos)
     float texelSize = 1.0f / 2048.0f;
     float2 offset = texelSize * PcfRadius;
 
+    float calculatedDepth = ndcPos.z - (normalOffset * ShadowBias + ShadowBias);
+
     float shadowSum = 0.0f;
-    shadowSum += SampleShadowDepth(uv + float2(-offset.x, -offset.y), ndcPos.z);
-    shadowSum += SampleShadowDepth(uv + float2( 0.0f,    -offset.y), ndcPos.z);
-    shadowSum += SampleShadowDepth(uv + float2( offset.x, -offset.y), ndcPos.z);
-    shadowSum += SampleShadowDepth(uv + float2(-offset.x,  0.0f),    ndcPos.z);
-    shadowSum += SampleShadowDepth(uv, ndcPos.z);
-    shadowSum += SampleShadowDepth(uv + float2( offset.x,  0.0f),    ndcPos.z);
-    shadowSum += SampleShadowDepth(uv + float2(-offset.x,  offset.y), ndcPos.z);
-    shadowSum += SampleShadowDepth(uv + float2( 0.0f,     offset.y), ndcPos.z);
-    shadowSum += SampleShadowDepth(uv + float2( offset.x,  offset.y), ndcPos.z);
+    shadowSum += SampleShadowDepth(uv + float2(-offset.x, -offset.y), calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(0.0f, -offset.y), calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(offset.x, -offset.y), calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(-offset.x, 0.0f), calculatedDepth);
+    shadowSum += SampleShadowDepth(uv, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(offset.x, 0.0f), calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(-offset.x, offset.y), calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(0.0f, offset.y), calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(offset.x, offset.y), calculatedDepth);
 
     return shadowSum / 9.0f;
 }
@@ -103,14 +106,14 @@ float4 PSMain(VSOutput input) : SV_TARGET
     float3 normal = normalize(input.WorldNormal);
     ambientColor = ambientColor * AmbientGradient(normal);
 
-    float NdotL = max(dot(normal, lightDir), 0.0);
-    float3 diffuse = lightColor * diffuseColor * NdotL;
+    float NdotL = saturate(dot(normal, lightDir));
+    float betterLambert = pow(NdotL, 0.5);
+    float3 diffuse = lightColor * diffuseColor * betterLambert;
 
     // ── Apply shadow factor to diffuse lighting ──
-    float shadow = ComputeShadowFactor(input.LightClipPos);
+    float shadow = ComputeShadowFactor(input.LightClipPos, NdotL);
     diffuse *= shadow;
 
     float3 color = ambientColor + diffuse;
     return float4(color, 1.0);
 }
-
