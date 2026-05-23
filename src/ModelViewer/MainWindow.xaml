@@ -36,8 +36,6 @@
                 <ColumnDefinition Width="250" MinWidth="180" />    <!-- Left panel -->
                 <ColumnDefinition Width="5" />                      <!-- Left splitter -->
                 <ColumnDefinition Width="*" MinWidth="300" />      <!-- 3D viewport -->
-                <ColumnDefinition Width="5" />                      <!-- Right splitter -->
-                <ColumnDefinition Width="250" MinWidth="180" />    <!-- Right panel -->
             </Grid.ColumnDefinitions>
         <!-- Scene models panel (left side) -->
             <DockPanel Grid.Column="0" Margin="4">
@@ -49,6 +47,10 @@
                                           DockPanel.Dock="Top"
                                           Margin="0,4,0,0"
                                           Height="Auto" />
+            <controls:LightControlPanel x:Name="LightPanel"
+                                        DockPanel.Dock="Top"
+                                        Margin="0,4,0,0"
+                                        Height="Auto" />
         </DockPanel>
 
             <!-- Left GridSplitter -->
@@ -61,21 +63,6 @@
                           BorderThickness="1,0,1,0" />
             <!-- The 3D rendering surface -->
             <ContentControl x:Name="RenderHost" Grid.Column="2" />
-
-            <!-- Right GridSplitter -->
-            <GridSplitter Grid.Column="3"
-                          Width="5"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          Background="#2D2D2D"
-                          BorderBrush="#505050"
-                          BorderThickness="1,0,1,0" />
-
-            <!-- Light direction control panel (right side) -->
-            <controls:LightControlPanel x:Name="LightPanel"
-                                        Grid.Column="4"
-                                        Margin="5"
-                                        Height="Auto" />
         </Grid>
 
         <!-- Status bar -->
