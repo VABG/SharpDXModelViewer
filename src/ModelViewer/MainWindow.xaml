@@ -33,9 +33,15 @@
         <controls:LightControlPanel x:Name="LightPanel"
                                    DockPanel.Dock="Right" Margin="5" />
 
-        <!-- Scene models panel (left side) -->
-        <controls:SceneModelPanel x:Name="ScenePanel"
-                                 DockPanel.Dock="Left" Margin="5" />
+                <!-- Scene models panel (left side) -->
+        <DockPanel DockPanel.Dock="Left" Margin="5">
+            <controls:SceneModelPanel x:Name="ScenePanel"
+                                     DockPanel.Dock="Top"
+                                     Height="250" />
+            <controls:ModelTransformPanel x:Name="TransformPanel"
+                                         DockPanel.Dock="Bottom"
+                                         Margin="0,5,0,0" />
+        </DockPanel>
 
         <!-- The 3D rendering surface will be hosted here -->
         <ContentControl x:Name="RenderHost" />

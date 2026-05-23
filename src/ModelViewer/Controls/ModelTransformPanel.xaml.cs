@@ -1,0 +1,259 @@
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using ModelViewer.Rendering;
+
+namespace ModelViewer.Controls;
+
+/// <summary>
+/// WPF panel for editing the transform (position, rotation in degrees, scale)
+/// of a selected <see cref="SceneModel"/>.
+/// </summary>
+internal partial class ModelTransformPanel : UserControl
+{
+    private SceneModel? _selectedModel;
+
+    // ── Step sizes for increment/decrement buttons ─────────────────
+    private const double PositionStep = 0.5;
+    private const double RotationStep = 5.0;   // degrees
+    private const double ScaleStep = 0.1;
+
+    // ── TextBox formatting ────────────────────────────────────────
+    private const string NumberFormat = "F3";
+
+    public ModelTransformPanel()
+    {
+        InitializeComponent();
+        SetEnabled(false);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Public API — call from MainWindow when selection changes
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Binds the panel to a specific scene model. Pass <c>null</c> to
+    /// clear the selection and disable all controls.
+    /// </summary>
+    public void SelectModel(SceneModel? model)
+    {
+        _selectedModel = model;
+
+        if (model == null)
+        {
+            SelectedModelName.Text = "(no selection)";
+            SetEnabled(false);
+            ClearTexts();
+            return;
+        }
+
+        SelectedModelName.Text = model.DisplayName;
+        SetEnabled(true);
+        RefreshFromModel();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Sync UI ← model
+    // ══════════════════════════════════════════════════════════════
+
+    private void RefreshFromModel()
+    {
+        if (_selectedModel == null) return;
+
+        var t = _selectedModel.Transform;
+
+        PosXText.Text = t.Position.X.ToString(NumberFormat, CultureInfo.InvariantCulture);
+        PosYText.Text = t.Position.Y.ToString(NumberFormat, CultureInfo.InvariantCulture);
+        PosZText.Text = t.Position.Z.ToString(NumberFormat, CultureInfo.InvariantCulture);
+
+        // Rotation stored in radians → convert to degrees for display
+        var rotXDeg = Math.Round(t.Rotation.X * (180.0 / Math.PI), 3);
+        var rotYDeg = Math.Round(t.Rotation.Y * (180.0 / Math.PI), 3);
+        var rotZDeg = Math.Round(t.Rotation.Z * (180.0 / Math.PI), 3);
+
+        RotXText.Text = rotXDeg.ToString(NumberFormat, CultureInfo.InvariantCulture);
+        RotYText.Text = rotYDeg.ToString(NumberFormat, CultureInfo.InvariantCulture);
+        RotZText.Text = rotZDeg.ToString(NumberFormat, CultureInfo.InvariantCulture);
+
+        ScaleText.Text = t.Scale.ToString(NumberFormat, CultureInfo.InvariantCulture);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Sync model ← UI  (commit current text values back to the model)
+    // ══════════════════════════════════════════════════════════════
+
+    private void CommitTransform()
+    {
+        if (_selectedModel == null) return;
+
+        var t = _selectedModel.Transform;
+
+        // ── Position ──────────────────────────────────────────────
+        if (TryParseDouble(PosXText.Text, out var px)) t.Position.X = (float)px;
+        if (TryParseDouble(PosYText.Text, out var py)) t.Position.Y = (float)py;
+        if (TryParseDouble(PosZText.Text, out var pz)) t.Position.Z = (float)pz;
+
+        // ── Rotation (degrees → radians) ──────────────────────────
+        if (TryParseDouble(RotXText.Text, out var rx))
+            t.Rotation.X = (float)(rx * Math.PI / 180.0);
+        if (TryParseDouble(RotYText.Text, out var ry))
+            t.Rotation.Y = (float)(ry * Math.PI / 180.0);
+        if (TryParseDouble(RotZText.Text, out var rz))
+            t.Rotation.Z = (float)(rz * Math.PI / 180.0);
+
+        // ── Scale (guard against zero/negative) ───────────────────
+        if (TryParseDouble(ScaleText.Text, out var sc) && sc > 0)
+            t.Scale = (float)sc;
+
+        _selectedModel.Transform = t;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Position increment / decrement
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnPositionIncrement_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn) return;
+        ApplyPositionDelta(btn.Tag?.ToString() ?? "", PositionStep);
+    }
+
+    private void OnPositionDecrement_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn) return;
+        ApplyPositionDelta(btn.Tag?.ToString() ?? "", -PositionStep);
+    }
+
+    private void ApplyPositionDelta(string axis, double delta)
+    {
+        if (_selectedModel == null) return;
+        var t = _selectedModel.Transform;
+
+        t.Position.X += (float)(axis switch { "X" => delta, _ => 0 });
+        t.Position.Y += (float)(axis switch { "Y" => delta, _ => 0 });
+        t.Position.Z += (float)(axis switch { "Z" => delta, _ => 0 });
+
+        _selectedModel.Transform = t;
+        RefreshFromModel();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Rotation increment / decrement (in degrees)
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnRotationIncrement_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn) return;
+        ApplyRotationDelta(btn.Tag?.ToString()!, RotationStep);
+    }
+
+    private void OnRotationDecrement_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn) return;
+        ApplyRotationDelta(btn.Tag?.ToString()!, -RotationStep);
+    }
+
+    private void ApplyRotationDelta(string? axis, double deltaDegrees)
+    {
+        if (_selectedModel == null) return;
+        var t = _selectedModel.Transform;
+
+        double deltaRad = deltaDegrees * Math.PI / 180.0;
+
+        t.Rotation.X += (float)(axis switch { "X" => deltaRad, _ => 0 });
+        t.Rotation.Y += (float)(axis switch { "Y" => deltaRad, _ => 0 });
+        t.Rotation.Z += (float)(axis switch { "Z" => deltaRad, _ => 0 });
+
+        _selectedModel.Transform = t;
+        RefreshFromModel();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Scale increment / decrement
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnScaleIncrement_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedModel == null) return;
+        var t = _selectedModel.Transform;
+        t.Scale = Math.Max(0.01f, t.Scale + (float)ScaleStep);
+        _selectedModel.Transform = t;
+        RefreshFromModel();
+    }
+
+    private void OnScaleDecrement_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedModel == null) return;
+        var t = _selectedModel.Transform;
+        t.Scale = Math.Max(0.01f, t.Scale - (float)ScaleStep);
+        _selectedModel.Transform = t;
+        RefreshFromModel();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Text-box commit handlers
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnPositionText_LostFocus(object? sender, RoutedEventArgs e) => CommitTransform();
+    private void OnRotationText_LostFocus(object? sender, RoutedEventArgs e) => CommitTransform();
+    private void OnScaleText_LostFocus(object? sender, RoutedEventArgs e) => CommitTransform();
+
+    private void OnPositionText_KeyDown(object? sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter) CommitTransform();
+    }
+
+    private void OnRotationText_KeyDown(object? sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter) CommitTransform();
+    }
+
+    private void OnScaleText_KeyDown(object? sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter) CommitTransform();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Reset
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnResetTransform_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedModel == null) return;
+        _selectedModel.Transform = ModelTransform.Identity;
+        RefreshFromModel();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Helpers
+    // ══════════════════════════════════════════════════════════════
+
+    private static bool TryParseDouble(string text, out double value)
+    {
+        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    private void SetEnabled(bool enabled)
+    {
+        PosXText.IsEnabled = enabled;
+        PosYText.IsEnabled = enabled;
+        PosZText.IsEnabled = enabled;
+        RotXText.IsEnabled = enabled;
+        RotYText.IsEnabled = enabled;
+        RotZText.IsEnabled = enabled;
+        ScaleText.IsEnabled = enabled;
+    }
+
+    private void ClearTexts()
+    {
+        PosXText.Text = string.Empty;
+        PosYText.Text = string.Empty;
+        PosZText.Text = string.Empty;
+        RotXText.Text = string.Empty;
+        RotYText.Text = string.Empty;
+        RotZText.Text = string.Empty;
+        ScaleText.Text = string.Empty;
+    }
+}

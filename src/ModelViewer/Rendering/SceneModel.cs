@@ -1,13 +1,16 @@
 using SharpDX;
+using SharpDX.Direct3D11;
+using Buffer = SharpDX.Direct3D11.Buffer;
 
 namespace ModelViewer.Rendering;
 
 /// <summary>
 /// Represents a single 3D model instance in the scene with metadata for the UI.
 /// Wraps a <see cref="Model"/> and exposes a transform that can be manipulated
-/// independently per-instance.
+/// independently per-instance.  Implements <see cref="IDrawableObject"/> so the
+/// renderer can read this transform directly.
 /// </summary>
-public class SceneModel : IDisposable
+public class SceneModel : IDrawableObject, IDisposable
 {
     private readonly Model _model;
     private readonly object _transformLock = new();
@@ -21,6 +24,17 @@ public class SceneModel : IDisposable
 
     /// <summary>The underlying D3D model resource.</summary>
     public Model Model => _model;
+
+    // ── IDrawableObject — delegates buffer access to inner Model ──────
+
+    /// <inheritdoc />
+    public Buffer? VertexBuffer => _model.VertexBuffer;
+
+    /// <inheritdoc />
+    public Buffer? IndexBuffer => _model.IndexBuffer;
+
+    /// <inheritdoc />
+    public int IndexCount => _model.IndexCount;
 
     /// <summary>
     /// Model-space transform for this instance. Thread-safe: reads and writes

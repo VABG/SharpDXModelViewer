@@ -43,10 +43,11 @@ public partial class MainWindow : Window
             };
 
                                     // ── Wire up scene-model panel ───────────────────────────────
-            ScenePanel.BindModels(_renderer.ModelList.ModelsCollection);
-            ScenePanel.ModelFileRequested += OnModelFileRequested;
-            ScenePanel.ModelRemovalRequested += OnModelRemovalRequested;
-            ScenePanel.ClearSceneRequested += OnClearSceneRequested;
+                                    ScenePanel.BindModels(_renderer.ModelList.ModelsCollection);
+                                    ScenePanel.ModelFileRequested += OnModelFileRequested;
+                                    ScenePanel.ModelRemovalRequested += OnModelRemovalRequested;
+                                    ScenePanel.ClearSceneRequested += OnClearSceneRequested;
+                                    ScenePanel.SelectionChanged += OnSceneModelSelectionChanged;
 
             // ── Wire up light-control panel ─────────────────────────────
             LightPanel.LightDirectionChanged += _renderer.SetLightDirection;
@@ -93,10 +94,23 @@ public partial class MainWindow : Window
         StatusBar.StatusText = $"Removed: {sceneModel.DisplayName}";
     }
 
-    private void OnClearSceneRequested()
+        private void OnClearSceneRequested()
     {
         _renderer?.ModelList.Clear();
         StatusBar.StatusText = "Scene cleared";
+        TransformPanel.SelectModel(null);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    //  Scene-model selection → transform panel
+    // ────────────────────────────────────────────────────────────────────
+
+    private void OnSceneModelSelectionChanged(SceneModel? selected)
+    {
+        TransformPanel.SelectModel(selected);
+        StatusBar.StatusText = selected is null
+            ? "No model selected"
+            : $"Selected: {selected.DisplayName}";
     }
 
     // ────────────────────────────────────────────────────────────────────

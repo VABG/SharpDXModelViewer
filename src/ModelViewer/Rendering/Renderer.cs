@@ -424,9 +424,9 @@ public class Renderer : IDisposable
                     // ── Draw grid into shadow map ──
                     DrawObject(context, _grid!);
 
-                    // ── Draw all scene models into shadow map ──
+                                        // ── Draw all scene models into shadow map ──
                     foreach (var sm in snapshot)
-                        DrawObject(context, sm.Model);
+                        DrawObject(context, sm);
                 }
 
                 // ═══════════════════════════════════════════════════════════════
@@ -482,9 +482,9 @@ public class Renderer : IDisposable
                 // ── Draw grid (always visible) ─────────────────────────────────
                 DrawObject(context, _grid!);
 
-                // ── Draw all scene models ────────────────────────────────────
+                                // ── Draw all scene models ────────────────────────────────────
                 foreach (var sm in snapshot)
-                    DrawObject(context, sm.Model);
+                    DrawObject(context, sm);
 
                 // ── Unbind shadow map resources (good practice before present) ──
                 context.PixelShader.SetShaderResource(0, null);

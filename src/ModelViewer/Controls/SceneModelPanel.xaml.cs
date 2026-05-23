@@ -23,6 +23,9 @@ internal partial class SceneModelPanel : UserControl
     /// <summary>Fired when the user wants to clear the entire scene.</summary>
     public event Action? ClearSceneRequested;
 
+    /// <summary>Fired when the selected model in the ListBox changes.</summary>
+    public event Action<SceneModel?>? SelectionChanged;
+
     /// <summary>Set this to bind the ListBox to the live model collection.</summary>
     public ObservableCollection<SceneModel> Models { get; set; } = new();
 
@@ -31,6 +34,7 @@ internal partial class SceneModelPanel : UserControl
         InitializeComponent();
         ModelListBox.ItemsSource = Models;
         ModelListBox.PreviewKeyDown += OnPreviewKeyDown;
+        ModelListBox.SelectionChanged += OnModelListBoxSelectionChanged;
     }
 
     /// <summary>
@@ -94,6 +98,13 @@ internal partial class SceneModelPanel : UserControl
             OnRemoveSelected_Click(sender, e);
             e.Handled = true;
         }
+    }
+
+    // ── ListBox selection change → notify parent ───────────────────────
+
+    private void OnModelListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        SelectionChanged?.Invoke(ModelListBox.SelectedItem as SceneModel);
     }
 }
 
