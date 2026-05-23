@@ -78,8 +78,11 @@ public partial class MainWindow : Window
     {
         try
         {
-            _renderer?.AddModel(filePath);
+            var sceneModel = _renderer?.AddModel(filePath);
             StatusBar.StatusText = $"Added: {System.IO.Path.GetFileName(filePath)}";
+
+            // Auto-select the newly added model in the SceneModels view
+            ScenePanel.SelectModel(sceneModel);
         }
         catch (Exception ex)
         {
@@ -159,5 +162,6 @@ public partial class MainWindow : Window
         Close();
     }
 }
+
 
 
