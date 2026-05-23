@@ -51,8 +51,29 @@ float SampleShadowDepth(float2 uv, float depth)
     return depth <= storedDepth ? 1.0f : 0.0f;
 }
 
+// ── Hash-based noise for randomized PCF sampling (ps_4_0 compatible) ──
 /// <summary>
-/// Computes the soft shadow factor using 9-tap Percentage-Closer Filtering (PCF).
+/// Returns a pseudo-random value in [0, 1) based on UV coordinates and a seed.
+/// Uses sin/cos mixing — fully compatible with shader model 4.0.
+/// </summary>
+float HashFloat(float2 uv, float seed)
+{
+    uv += seed;
+    float f = dot(uv, float2(12.9898f, 78.233f));
+    return frac(sin(f) * 43758.5453f);
+}
+
+/// <summary>
+/// Returns a pseudo-random 2D offset in [-0.5, 0.5) for a given UV and seed.
+/// </summary>
+float2 RandomFloat2(float2 uv, float seed)
+{
+    return float2(HashFloat(uv, seed), HashFloat(uv, seed + 1.0f)) - 0.5f;
+}
+
+/// <summary>
+/// Computes the soft shadow factor using 9-tap Percentage-Closer Filtering (PCF)
+/// with randomized sample offsets for smoother shadow edges.
 /// Returns 1.0 = fully lit, 0.0 = fully shadowed.
 /// When PcfRadius == 0 the function falls back to a single-sample hard shadow.
 /// </summary>
@@ -75,22 +96,25 @@ float ComputeShadowFactor(float4 lightClipPos, float dot)
     if (PcfRadius <= 0.0f)
         return SampleShadowDepth(uv, ndcPos.z);
 
-    // ── 9-tap PCF: sample a 3×3 grid around the center UV ──
+    // ── 9-tap PCF with randomized offsets (Randomized PCF) ──
+    // Each sample gets a unique jitter so the grid pattern doesn't alias
     float texelSize = 1.0f / 2048.0f;
     float2 offset = texelSize * PcfRadius;
 
     float calculatedDepth = ndcPos.z - (normalOffset * ShadowBias + ShadowBias);
 
     float shadowSum = 0.0f;
-    shadowSum += SampleShadowDepth(uv + float2(-offset.x, -offset.y), calculatedDepth);
-    shadowSum += SampleShadowDepth(uv + float2(0.0f, -offset.y), calculatedDepth);
-    shadowSum += SampleShadowDepth(uv + float2(offset.x, -offset.y), calculatedDepth);
-    shadowSum += SampleShadowDepth(uv + float2(-offset.x, 0.0f), calculatedDepth);
-    shadowSum += SampleShadowDepth(uv, calculatedDepth);
-    shadowSum += SampleShadowDepth(uv + float2(offset.x, 0.0f), calculatedDepth);
-    shadowSum += SampleShadowDepth(uv + float2(-offset.x, offset.y), calculatedDepth);
-    shadowSum += SampleShadowDepth(uv + float2(0.0f, offset.y), calculatedDepth);
-    shadowSum += SampleShadowDepth(uv + float2(offset.x, offset.y), calculatedDepth);
+
+    // ── Unrolled 3×3 kernel with per-sample noise jitter ──
+    shadowSum += SampleShadowDepth(uv + float2(-1.0f, -1.0f) * offset + RandomFloat2(uv, 1.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2( 0.0f, -1.0f) * offset + RandomFloat2(uv, 2.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2( 1.0f, -1.0f) * offset + RandomFloat2(uv, 3.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(-1.0f,  0.0f) * offset + RandomFloat2(uv, 4.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2( 0.0f,  0.0f) * offset + RandomFloat2(uv, 5.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2( 1.0f,  0.0f) * offset + RandomFloat2(uv, 6.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2(-1.0f,  1.0f) * offset + RandomFloat2(uv, 7.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2( 0.0f,  1.0f) * offset + RandomFloat2(uv, 8.0f) * offset, calculatedDepth);
+    shadowSum += SampleShadowDepth(uv + float2( 1.0f,  1.0f) * offset + RandomFloat2(uv, 9.0f) * offset, calculatedDepth);
 
     return shadowSum / 9.0f;
 }
