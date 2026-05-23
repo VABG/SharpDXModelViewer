@@ -40,11 +40,10 @@ public class Renderer : IDisposable
     private Model? _currentModel;
     private readonly Grid? _grid;
 
-        // Render loop state
+                // Render loop state
     private readonly CancellationTokenSource _cts = new();
     private Task? _renderLoopTask;
     private Task? _updateLoopTask;
-    private readonly object _transformLock = new();
     private int _frameCount;
 
     /// <summary>
@@ -237,7 +236,7 @@ public class Renderer : IDisposable
         _updateLoopTask = Task.Run(() => UpdateLoop(_cts.Token));
     }
 
-        /// <summary>
+    /// <summary>
     /// Runs every frame to update model transforms, animations, physics, etc.
     /// Mutations are guarded by _transformLock so the render thread can safely read them.
     /// </summary>
@@ -255,14 +254,6 @@ public class Renderer : IDisposable
                 float dt = MathF.Min((float)((now - lastTimestamp) / ticksPerMs / 1000.0), 0.1f); // clamp to 100ms
                 lastTimestamp = now;
 
-                // ── Update grid transform (slow Y-axis rotation test) ────────────
-                const float gridRotationSpeed = 0.15f; // radians per second
-                lock (_transformLock)
-                {
-                    _grid!.Transform = _grid.Transform.WithRotationAdded(
-                        new Vector3(0, gridRotationSpeed * dt, 0));
-                }
-
                 // Sleep to maintain ~60 Hz cadence
                 Thread.Sleep(targetIntervalMs);
             }
@@ -278,22 +269,34 @@ public class Renderer : IDisposable
         }
     }
 
-    /// <summary>
-    /// Thread-safe snapshot of the grid's current transform.
-    /// </summary>
-    private ModelTransform GetGridTransform()
+    private void Update(float dt)
     {
-        lock (_transformLock)
-            return _grid!.Transform;
+        // ── Update grid transform (slow Y-axis rotation test) ────────────
+        const float gridRotationSpeed = 0.15f; // radians per second
+        _grid!.Transform = _grid.Transform.WithRotationAdded(
+            new Vector3(0, gridRotationSpeed * dt, 0));
     }
 
-        /// <summary>
-    /// Thread-safe snapshot of the current model's transform (if loaded).
+    /// <summary>
+    /// Uploads world matrix and issues a draw call for the given drawable object.
+    /// The object's <see cref="IDrawableObject.Transform"/> property is thread-safe
+    /// (guarded by the object's own internal lock).
     /// </summary>
-    private ModelTransform GetModelTransform()
+    private void DrawObject(DeviceContext context, IDrawableObject obj)
     {
-        lock (_transformLock)
-            return _currentModel?.Transform ?? ModelTransform.Identity;
+        if (obj.VertexBuffer == null || obj.IndexBuffer == null)
+            return;
+
+        UploadWorldMatrix(context, obj.Transform);
+
+        var stride = VertexPositionNormalTexture.SizeInBytes;
+        context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
+            obj.VertexBuffer, stride, 0));
+        context.InputAssembler.SetIndexBuffer(obj.IndexBuffer,
+            Format.R32_UInt, 0);
+        context.InputAssembler.PrimitiveTopology =
+            SharpDX.Direct3D.PrimitiveTopology.TriangleList;
+        context.DrawIndexed(obj.IndexCount, 0, 0);
     }
 
     /// <summary>
@@ -412,35 +415,12 @@ public class Renderer : IDisposable
                     context.PixelShader.Set(_shadowPixelShader);
                     context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
 
-                    // ── Draw grid into shadow map ──
-                    if (_grid != null && _grid.VertexBuffer != null && _grid.IndexBuffer != null)
-                    {
-                        UploadWorldMatrix(context, GetGridTransform());
-
-                        var stride = VertexPositionNormalTexture.SizeInBytes;
-                        context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
-                            _grid.VertexBuffer, stride, 0));
-                        context.InputAssembler.SetIndexBuffer(_grid.IndexBuffer,
-                            Format.R32_UInt, 0);
-                        context.InputAssembler.PrimitiveTopology =
-                            SharpDX.Direct3D.PrimitiveTopology.TriangleList;
-                        context.DrawIndexed(_grid.IndexCount, 0, 0);
-                    }
+                                        // ── Draw grid into shadow map ──
+                    DrawObject(context, _grid!);
 
                     // ── Draw model into shadow map ──
-                    if (_currentModel != null && _currentModel.VertexBuffer != null && _currentModel.IndexBuffer != null)
-                    {
-                        UploadWorldMatrix(context, GetModelTransform());
-
-                        var stride = VertexPositionNormalTexture.SizeInBytes;
-                        context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
-                            _currentModel.VertexBuffer, stride, 0));
-                        context.InputAssembler.SetIndexBuffer(_currentModel.IndexBuffer,
-                            Format.R32_UInt, 0);
-                        context.InputAssembler.PrimitiveTopology =
-                            SharpDX.Direct3D.PrimitiveTopology.TriangleList;
-                        context.DrawIndexed(_currentModel.IndexCount, 0, 0);
-                    }
+                    if (_currentModel != null)
+                        DrawObject(context, _currentModel);
                 }
 
                 // ═══════════════════════════════════════════════════════════════
@@ -493,39 +473,12 @@ public class Renderer : IDisposable
                 context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
                 context.Rasterizer.State = _deviceManager.RasterizerState;
 
-                                                                // ── Draw grid (always visible) ─────────────────────────────────
-                if (_grid != null && _grid.VertexBuffer != null && _grid.IndexBuffer != null)
-                {
-                    UploadWorldMatrix(context, GetGridTransform());
+                                                                                // ── Draw grid (always visible) ─────────────────────────────────
+                DrawObject(context, _grid!);
 
-                    var stride = VertexPositionNormalTexture.SizeInBytes;
-                    var offset = 0;
-
-                    context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
-                        _grid.VertexBuffer, stride, offset));
-                    context.InputAssembler.SetIndexBuffer(_grid.IndexBuffer,
-                        Format.R32_UInt, 0);
-                    context.InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleList;
-
-                    context.DrawIndexed(_grid.IndexCount, 0, 0);
-                }
-
-                                // ── Draw model ─────────────────────────────────────────────────
-                if (_currentModel != null && _currentModel.VertexBuffer != null && _currentModel.IndexBuffer != null)
-                {
-                    UploadWorldMatrix(context, GetModelTransform());
-
-                    var stride = VertexPositionNormalTexture.SizeInBytes;
-                    var offset = 0;
-
-                    context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
-                        _currentModel.VertexBuffer, stride, offset));
-                    context.InputAssembler.SetIndexBuffer(_currentModel.IndexBuffer,
-                        Format.R32_UInt, 0);
-                    context.InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleList;
-
-                    context.DrawIndexed(_currentModel.IndexCount, 0, 0);
-                }
+                // ── Draw model ─────────────────────────────────────────────────
+                if (_currentModel != null)
+                    DrawObject(context, _currentModel);
 
                                 // ── Unbind shadow map resources (good practice before present) ──
                                 context.PixelShader.SetShaderResource(0, null);

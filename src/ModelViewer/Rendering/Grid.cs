@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
 using Buffer = SharpDX.Direct3D11.Buffer;
@@ -9,18 +8,12 @@ namespace ModelViewer.Rendering;
 /// Renders a reference grid on the XZ plane so the camera orientation
 /// is visible even when no model is loaded.
 /// </summary>
-public class Grid : IDisposable
+public class Grid : DrawableObject
 {
     private Buffer? _vertexBuffer;
     private Buffer? _indexBuffer;
     private int _indexCount;
     private bool _disposed;
-
-    /// <summary>
-    /// Model-space transform for this grid (position, rotation, scale).
-    /// Mutate this from the render thread before the next frame renders.
-    /// </summary>
-    public ModelTransform Transform { get; set; } = ModelTransform.Identity;
 
     /// <summary>
     /// Number of divisions along each axis (grid will have divisionsCount + 1 lines per axis).
@@ -32,9 +25,9 @@ public class Grid : IDisposable
     /// </summary>
     private float Size { get; }
 
-    public int IndexCount => _indexCount;
-    public Buffer? VertexBuffer => _vertexBuffer;
-    public Buffer? IndexBuffer => _indexBuffer;
+    public override int IndexCount => _indexCount;
+    public override Buffer? VertexBuffer => _vertexBuffer;
+    public override Buffer? IndexBuffer => _indexBuffer;
 
     /// <summary>
     /// Creates a grid centered at the origin on the XZ plane.
@@ -55,59 +48,12 @@ public class Grid : IDisposable
         DivisionsCount = divisionsCount;
     }
 
-    private void CreateBuffers(Device device)
+        private void CreateBuffers(Device device)
     {
         var (vertices, indices) = GenerateGridMesh();
 
-        // ── Vertex buffer ──────────────────────────────────────────────────────
-        var vertexDesc = new BufferDescription
-        {
-            SizeInBytes = vertices.Count * VertexPositionNormalTexture.SizeInBytes,
-            Usage = ResourceUsage.Immutable,
-            BindFlags = BindFlags.VertexBuffer,
-            CpuAccessFlags = CpuAccessFlags.None,
-            OptionFlags = ResourceOptionFlags.None,
-        };
-
-        var vertexSize = vertices.Count * VertexPositionNormalTexture.SizeInBytes;
-        var vertexPtr = Marshal.AllocHGlobal(vertexSize);
-        try
-        {
-            for (int i = 0; i < vertices.Count; i++)
-            {
-                Marshal.StructureToPtr(vertices[i], IntPtr.Add(vertexPtr, i * VertexPositionNormalTexture.SizeInBytes), false);
-            }
-            using var vertexStream = new DataStream(vertexPtr, vertexSize, true, true);
-            _vertexBuffer = new Buffer(device, vertexStream, vertexDesc);
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(vertexPtr);
-        }
-
-        // ── Index buffer ───────────────────────────────────────────────────────
-        var indexDesc = new BufferDescription
-        {
-            SizeInBytes = indices.Count * sizeof(int),
-            Usage = ResourceUsage.Immutable,
-            BindFlags = BindFlags.IndexBuffer,
-            CpuAccessFlags = CpuAccessFlags.None,
-            OptionFlags = ResourceOptionFlags.None,
-        };
-
-        var indexSize = indices.Count * sizeof(int);
-        var indexPtr = Marshal.AllocHGlobal(indexSize);
-        try
-        {
-            Marshal.Copy(indices.ToArray(), 0, indexPtr, indices.Count);
-            using var indexStream = new DataStream(indexPtr, indexSize, true, true);
-            _indexBuffer = new Buffer(device, indexStream, indexDesc);
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(indexPtr);
-        }
-
+        _vertexBuffer = BufferHelpers.CreateVertexBuffer(device, vertices);
+        _indexBuffer = BufferHelpers.CreateIndexBuffer(device, indices);
         _indexCount = indices.Count;
     }
 

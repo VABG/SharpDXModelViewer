@@ -10,22 +10,16 @@ namespace ModelViewer.Rendering;
 /// <summary>
 /// Represents a 3D model loaded via AssimpNet, with vertex/index buffers and material data.
 /// </summary>
-public class Model : IDisposable
+public class Model : DrawableObject
 {
     private SharpDX.Direct3D11.Buffer? _vertexBuffer;
     private SharpDX.Direct3D11.Buffer? _indexBuffer;
     private int _indexCount;
     private bool _disposed;
 
-        public int IndexCount => _indexCount;
-    public SharpDX.Direct3D11.Buffer? VertexBuffer => _vertexBuffer;
-    public SharpDX.Direct3D11.Buffer? IndexBuffer => _indexBuffer;
-
-    /// <summary>
-    /// Model-space transform for this model (position, rotation, scale).
-    /// Mutate this from the render thread before the next frame renders.
-    /// </summary>
-    public ModelTransform Transform { get; set; } = ModelTransform.Identity;
+    public override int IndexCount => _indexCount;
+    public override SharpDX.Direct3D11.Buffer? VertexBuffer => _vertexBuffer;
+    public override SharpDX.Direct3D11.Buffer? IndexBuffer => _indexBuffer;
 
     /// <summary>
     /// Loads a 3D model file and creates D3D11 vertex/index buffers.
@@ -84,57 +78,11 @@ public class Model : IDisposable
         return model;
     }
 
-    private void CreateBuffers(Device device, List<VertexPositionNormalTexture> vertices, List<int> indices)
+        private void CreateBuffers(Device device, List<VertexPositionNormalTexture> vertices, List<int> indices)
     {
         _indexCount = indices.Count;
-
-        var vertexDesc = new BufferDescription
-        {
-            SizeInBytes = vertices.Count * VertexPositionNormalTexture.SizeInBytes,
-            Usage = ResourceUsage.Immutable,
-            BindFlags = BindFlags.VertexBuffer,
-            CpuAccessFlags = CpuAccessFlags.None,
-            OptionFlags = ResourceOptionFlags.None,
-        };
-
-        // SharpDX 4.2.0: Buffer constructor expects DataStream for initial data
-        var vertexSize = vertices.Count * VertexPositionNormalTexture.SizeInBytes;
-        var vertexPtr = Marshal.AllocHGlobal(vertexSize);
-        try
-        {
-            for (int i = 0; i < vertices.Count; i++)
-            {
-                Marshal.StructureToPtr(vertices[i], IntPtr.Add(vertexPtr, i * VertexPositionNormalTexture.SizeInBytes), false);
-            }
-            using var vertexStream = new DataStream(vertexPtr, vertexSize, true, true);
-            _vertexBuffer = new SharpDX.Direct3D11.Buffer(device, vertexStream, vertexDesc);
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(vertexPtr);
-        }
-
-        var indexDesc = new BufferDescription
-        {
-            SizeInBytes = indices.Count * sizeof(int),
-            Usage = ResourceUsage.Immutable,
-            BindFlags = BindFlags.IndexBuffer,
-            CpuAccessFlags = CpuAccessFlags.None,
-            OptionFlags = ResourceOptionFlags.None,
-        };
-
-        var indexSize = indices.Count * sizeof(int);
-        var indexPtr = Marshal.AllocHGlobal(indexSize);
-        try
-        {
-            Marshal.Copy(indices.ToArray(), 0, indexPtr, indices.Count);
-            using var indexStream = new DataStream(indexPtr, indexSize, true, true);
-            _indexBuffer = new SharpDX.Direct3D11.Buffer(device, indexStream, indexDesc);
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(indexPtr);
-        }
+        _vertexBuffer = BufferHelpers.CreateVertexBuffer(device, vertices);
+        _indexBuffer = BufferHelpers.CreateIndexBuffer(device, indices);
     }
 
     public void Dispose()
