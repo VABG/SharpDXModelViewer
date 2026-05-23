@@ -8,17 +8,15 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="DarkTheme.xaml"/>
+                <ResourceDictionary Source="DarkTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
 
     <DockPanel>
-        <!-- Menu bar for model loading -->
+        <!-- Menu bar -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open Model..." Click="OpenModel_Click" />
-                <Separator Style="{StaticResource MenuItemSeparatorStyle}"/>
                 <MenuItem Header="E_xit" Click="Exit_Click" />
             </MenuItem>
             <MenuItem Header="_View">
@@ -29,26 +27,24 @@
         <!-- Status bar -->
         <controls:StatusBar x:Name="StatusBar" DockPanel.Dock="Bottom" />
 
-                <!-- Light direction control panel (right side) -->
+        <!-- Light direction control panel (right side) -->
         <controls:LightControlPanel x:Name="LightPanel"
-                                   DockPanel.Dock="Right" Margin="5"
-                                   Height="Auto" />
+                                    DockPanel.Dock="Right" Margin="5"
+                                    Height="Auto" />
 
-                                <!-- Scene models panel (left side) -->
-                <DockPanel DockPanel.Dock="Left" Margin="4">
-                    <controls:SceneModelPanel x:Name="ScenePanel"
-                                             DockPanel.Dock="Top"
-                                             Margin="0"
-                                             Height="Auto" />
-                    <controls:ModelTransformPanel x:Name="TransformPanel"
-                                                 DockPanel.Dock="Top"
-                                                 Margin="0,4,0,0"
-                                                 Height="Auto" />
-                </DockPanel>
+        <!-- Scene models panel (left side) -->
+        <DockPanel DockPanel.Dock="Left" Margin="4">
+            <controls:SceneModelPanel x:Name="ScenePanel"
+                                      DockPanel.Dock="Top"
+                                      Margin="0"
+                                      Height="Auto" />
+            <controls:ModelTransformPanel x:Name="TransformPanel"
+                                          DockPanel.Dock="Top"
+                                          Margin="0,4,0,0"
+                                          Height="Auto" />
+        </DockPanel>
 
         <!-- The 3D rendering surface will be hosted here -->
         <ContentControl x:Name="RenderHost" />
     </DockPanel>
 </Window>
-
-

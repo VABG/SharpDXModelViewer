@@ -1,6 +1,5 @@
 using System;
 using System.Windows;
-using Microsoft.Win32;
 using ModelViewer.Rendering;
 using SharpDX;
 
@@ -52,7 +51,7 @@ public partial class MainWindow : Window
             // ── Wire up light-control panel ─────────────────────────────
             LightPanel.LightDirectionChanged += _renderer.SetLightDirection;
 
-            StatusBar.StatusText = "Ready - Open a 3D model to begin";
+            StatusBar.StatusText = "Ready";
         }
         catch (Exception ex)
         {
@@ -116,35 +115,9 @@ public partial class MainWindow : Window
             : $"Selected: {selected.DisplayName}";
     }
 
-    // ────────────────────────────────────────────────────────────────────
+        // ────────────────────────────────────────────────────────────────────
     //  Menu handlers
     // ────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Open a file dialog to load a 3D model (legacy: replaces all models).
-    /// </summary>
-    private void OpenModel_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Filter = "3D Models|*.obj;*.fbx;*.gltf;*.glb;*.dae;*.stl|All Files|*.*",
-            Title = "Open 3D Model"
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            try
-            {
-                _renderer?.LoadModel(dialog.FileName);
-                StatusBar.StatusText = $"Loaded: {System.IO.Path.GetFileName(dialog.FileName)}";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to load model: {ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-    }
 
     /// <summary>
     /// Reset the camera to its default position.
@@ -162,6 +135,4 @@ public partial class MainWindow : Window
         Close();
     }
 }
-
-
 
