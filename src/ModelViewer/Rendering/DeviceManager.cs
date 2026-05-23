@@ -8,7 +8,7 @@ namespace ModelViewer.Rendering;
 /// </summary>
 public class DeviceManager : IDisposable
 {
-    private readonly D3DRenderSurface _surface;
+            private readonly D3DRenderSurface _surface;
     private SharpDX.Direct3D11.RenderTargetView? _renderTargetView;
     private SharpDX.Direct3D11.DepthStencilState? _depthStencilState;
     private SharpDX.Direct3D11.DepthStencilView? _depthStencilView;

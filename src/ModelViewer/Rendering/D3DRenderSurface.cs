@@ -36,6 +36,7 @@ public class D3DRenderSurface : HwndHost
     
     // Store the original window procedure so we can chain to it
     private IntPtr _originalWndProc;
+    private Format _rendertargetFormat = Format.R8G8B8A8_UNorm;
 
     // Static lookup: HWND -> D3DRenderSurface instance (for the WNDPROC callback)
     private static readonly Dictionary<IntPtr, D3DRenderSurface> _instances = new();
@@ -199,7 +200,7 @@ public class D3DRenderSurface : HwndHost
                 IsWindowed = true,
                 SwapEffect = SwapEffect.Discard,
                 OutputHandle = _hwnd,
-                ModeDescription = new ModeDescription(0, 0, new Rational(60, 1), Format.R8G8B8A8_UNorm),
+                ModeDescription = new ModeDescription(0, 0, new Rational(60, 1), _rendertargetFormat),
                 SampleDescription = new SampleDescription(4, 0),
                 Flags = SwapChainFlags.None,
             };
@@ -441,7 +442,7 @@ public class D3DRenderSurface : HwndHost
 
         try
         {
-            _swapChain.ResizeBuffers(1, width, height, Format.R8G8B8A8_UNorm, SwapChainFlags.None);
+            _swapChain.ResizeBuffers(1, width, height, _rendertargetFormat, SwapChainFlags.None);
         }
         catch (SharpDXException ex)
         {
