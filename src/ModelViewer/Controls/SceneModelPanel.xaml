@@ -2,7 +2,6 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:ClassModifier="internal"
-                          Width="200"
              Background="#2D2D30">
     <Border Background="#2D2D30" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4">
         <DockPanel>

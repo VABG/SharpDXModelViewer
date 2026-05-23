@@ -29,18 +29,21 @@
         <!-- Status bar -->
         <controls:StatusBar x:Name="StatusBar" DockPanel.Dock="Bottom" />
 
-        <!-- Light direction control panel (right side) -->
+                <!-- Light direction control panel (right side) -->
         <controls:LightControlPanel x:Name="LightPanel"
-                                   DockPanel.Dock="Right" Margin="5" />
+                                   DockPanel.Dock="Right" Margin="5"
+                                   Height="Auto" />
 
-                <!-- Scene models panel (left side) -->
+                                <!-- Scene models panel (left side) -->
                 <DockPanel DockPanel.Dock="Left" Margin="4">
                     <controls:SceneModelPanel x:Name="ScenePanel"
                                              DockPanel.Dock="Top"
-                                             Height="180" />
+                                             Margin="0"
+                                             Height="Auto" />
                     <controls:ModelTransformPanel x:Name="TransformPanel"
-                                                 DockPanel.Dock="Bottom"
-                                                 Margin="0,4,0,0" />
+                                                 DockPanel.Dock="Top"
+                                                 Margin="0,4,0,0"
+                                                 Height="Auto" />
                 </DockPanel>
 
         <!-- The 3D rendering surface will be hosted here -->
