@@ -27,25 +27,23 @@
 
             <!-- ── Collapsible Body ── -->
             <Grid x:Name="ContentGrid" Visibility="Visible">
-                <StackPanel Margin="8,6">
+                <StackPanel Margin="0,6">
 
                     <!-- Yaw component -->
-                    <TextBlock Text="Yaw:" Foreground="#CCCCCC" FontSize="11" Margin="0,0,0,2" />
+                    <TextBlock Text="Yaw:" Foreground="#CCCCCC" FontSize="11" Margin="5,0,0,2" />
                     <DockPanel Margin="0,0,0,6">
                         <TextBlock x:Name="YawText" Text="45°" Foreground="#CCCCCC"
-                                   FontSize="10" DockPanel.Dock="Right" />
+                                   FontSize="10" DockPanel.Dock="Right" Width="25" />
                         <Slider x:Name="YawSlider" Minimum="-180" Maximum="180" Value="45"
-                                TickFrequency="5" IsSnapToTickEnabled="True"
                                 ValueChanged="OnSlider_ValueChanged" Height="16" />
                     </DockPanel>
 
                     <!-- Pitch component -->
-                    <TextBlock Text="Pitch:" Foreground="#CCCCCC" FontSize="11" Margin="0,0,0,2" />
+                    <TextBlock Text="Pitch:" Foreground="#CCCCCC" FontSize="11" Margin="5,0,0,2" />
                     <DockPanel Margin="0,0,0,6">
                         <TextBlock x:Name="PitchText" Text="45°" Foreground="#CCCCCC"
-                                   FontSize="10" DockPanel.Dock="Right" />
+                                   FontSize="10" DockPanel.Dock="Right" Width="25" />
                         <Slider x:Name="PitchSlider" Minimum="0" Maximum="180" Value="45"
-                                TickFrequency="5" IsSnapToTickEnabled="True"
                                 ValueChanged="OnSlider_ValueChanged" Height="16" />
                     </DockPanel>
                 </StackPanel>
