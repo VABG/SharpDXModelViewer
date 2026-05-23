@@ -89,17 +89,17 @@ public static class DraggableNumberBehavior
 
         if ((bool)e.NewValue)
         {
-            tb.PreviewMouseLeftButtonDown += OnMouseLeftButtonDown;
+            tb.PreviewMouseDown += OnMouseDown;
             tb.PreviewMouseMove += OnMouseMove;
-            tb.PreviewMouseLeftButtonUp += OnMouseLeftButtonUp;
+            tb.PreviewMouseUp += OnMouseUp;
             tb.MouseEnter += OnMouseEnter;
             tb.MouseLeave += OnMouseLeave;
         }
         else
         {
-            tb.PreviewMouseLeftButtonDown -= OnMouseLeftButtonDown;
+            tb.PreviewMouseDown -= OnMouseDown;
             tb.PreviewMouseMove -= OnMouseMove;
-            tb.PreviewMouseLeftButtonUp -= OnMouseLeftButtonUp;
+            tb.PreviewMouseUp -= OnMouseUp;
             tb.MouseEnter -= OnMouseEnter;
             tb.MouseLeave -= OnMouseLeave;
         }
@@ -121,9 +121,11 @@ public static class DraggableNumberBehavior
 
     // ── Mouse handlers ────────────────────────────────────────────
 
-    private static void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private static void OnMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not TextBox textBox) return;
+        if (sender is not TextBox textBox || e.MiddleButton != MouseButtonState.Pressed) return;
+
+        textBox.CaptureMouse();
 
         var state = new DragState
         {
@@ -133,7 +135,7 @@ public static class DraggableNumberBehavior
         };
 
         textBox.Tag = state;
-        e.Handled = false; // allow normal text selection
+        e.Handled = true; // Capture mouse to track drags outside the control bounds
     }
 
     private static void OnMouseMove(object sender, MouseEventArgs e)
@@ -141,7 +143,7 @@ public static class DraggableNumberBehavior
         if (sender is not TextBox textBox) return;
         if (textBox.Tag is not DragState state) return;
         if (!state.IsDragging) return;
-        if (Mouse.LeftButton == MouseButtonState.Released)
+        if (Mouse.MiddleButton == MouseButtonState.Released)
         {
             state.IsDragging = false;
             textBox.Tag = null;
@@ -173,9 +175,15 @@ public static class DraggableNumberBehavior
         textBox.CaretIndex = textBox.Text.Length;
     }
 
-    private static void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private static void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
         if (sender is not TextBox textBox) return;
+
+        // Always release capture so the control isn't stuck capturing forever
+        if (textBox.IsMouseCaptured)
+        {
+            textBox.ReleaseMouseCapture();
+        }
 
         if (textBox.Tag is DragState state)
         {
