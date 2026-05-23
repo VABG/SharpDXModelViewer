@@ -16,11 +16,6 @@ internal partial class ModelTransformPanel : UserControl
 {
     private SceneModel? _selectedModel;
 
-    // ── Step sizes for increment/decrement buttons ─────────────────
-    private const double PositionStep = 0.5;
-    private const double RotationStep = 5.0;   // degrees
-    private const double ScaleStep = 0.1;
-
             // ── TextBox formatting ────────────────────────────────────────
     private const string NumberFormat = "F3";
 
@@ -164,88 +159,6 @@ internal partial class ModelTransformPanel : UserControl
     {
         // Just commit — the TextBox text is already updated by the behavior
         CommitTransform();
-    }
-
-    // ══════════════════════════════════════════════════════════════
-    //  Position increment / decrement
-    // ══════════════════════════════════════════════════════════════
-
-    private void OnPositionIncrement_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button btn) return;
-        ApplyPositionDelta(btn.Tag?.ToString() ?? "", PositionStep);
-    }
-
-    private void OnPositionDecrement_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button btn) return;
-        ApplyPositionDelta(btn.Tag?.ToString() ?? "", -PositionStep);
-    }
-
-    private void ApplyPositionDelta(string axis, double delta)
-    {
-        if (_selectedModel == null) return;
-        var t = _selectedModel.Transform;
-
-        t.Position.X += (float)(axis switch { "X" => delta, _ => 0 });
-        t.Position.Y += (float)(axis switch { "Y" => delta, _ => 0 });
-        t.Position.Z += (float)(axis switch { "Z" => delta, _ => 0 });
-
-        _selectedModel.Transform = t;
-        RefreshFromModel();
-    }
-
-    // ══════════════════════════════════════════════════════════════
-    //  Rotation increment / decrement (in degrees)
-    // ══════════════════════════════════════════════════════════════
-
-    private void OnRotationIncrement_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button btn) return;
-        ApplyRotationDelta(btn.Tag?.ToString()!, RotationStep);
-    }
-
-    private void OnRotationDecrement_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button btn) return;
-        ApplyRotationDelta(btn.Tag?.ToString()!, -RotationStep);
-    }
-
-    private void ApplyRotationDelta(string? axis, double deltaDegrees)
-    {
-        if (_selectedModel == null) return;
-        var t = _selectedModel.Transform;
-
-        double deltaRad = deltaDegrees * Math.PI / 180.0;
-
-        t.Rotation.X += (float)(axis switch { "X" => deltaRad, _ => 0 });
-        t.Rotation.Y += (float)(axis switch { "Y" => deltaRad, _ => 0 });
-        t.Rotation.Z += (float)(axis switch { "Z" => deltaRad, _ => 0 });
-
-        _selectedModel.Transform = t;
-        RefreshFromModel();
-    }
-
-    // ══════════════════════════════════════════════════════════════
-    //  Scale increment / decrement
-    // ══════════════════════════════════════════════════════════════
-
-    private void OnScaleIncrement_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_selectedModel == null) return;
-        var t = _selectedModel.Transform;
-        t.Scale = Math.Max(0.01f, t.Scale + (float)ScaleStep);
-        _selectedModel.Transform = t;
-        RefreshFromModel();
-    }
-
-    private void OnScaleDecrement_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_selectedModel == null) return;
-        var t = _selectedModel.Transform;
-        t.Scale = Math.Max(0.01f, t.Scale - (float)ScaleStep);
-        _selectedModel.Transform = t;
-        RefreshFromModel();
     }
 
     // ══════════════════════════════════════════════════════════════
