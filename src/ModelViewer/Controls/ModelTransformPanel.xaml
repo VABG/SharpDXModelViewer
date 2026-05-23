@@ -1,8 +1,10 @@
 <UserControl x:Class="ModelViewer.Controls.ModelTransformPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ModelViewer.Controls"
              x:ClassModifier="internal"
-             Background="#2D2D30">
+             Background="#2D2D30"
+             local:DraggableNumberBehavior.DragValueChanged="OnDragValueChanged">
     <Border Background="#2D2D30" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4">
         <DockPanel>
 
@@ -65,7 +67,9 @@
                                  TextAlignment="Right"
                                  LostFocus="OnPositionText_LostFocus"
                                  PreviewKeyDown="OnPositionText_KeyDown"
-                                 Tag="X" />
+                                 Tag="X"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.05" />
                         <Button Content="+" Width="20" Height="20"
                                 FontSize="10" Padding="0"
                                 Click="OnPositionIncrement_Click"
@@ -87,7 +91,9 @@
                                  TextAlignment="Right"
                                  LostFocus="OnPositionText_LostFocus"
                                  PreviewKeyDown="OnPositionText_KeyDown"
-                                 Tag="Y" />
+                                 Tag="Y"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.05" />
                         <Button Content="+" Width="20" Height="20"
                                 FontSize="10" Padding="0"
                                 Click="OnPositionIncrement_Click"
@@ -109,7 +115,9 @@
                                  TextAlignment="Right"
                                  LostFocus="OnPositionText_LostFocus"
                                  PreviewKeyDown="OnPositionText_KeyDown"
-                                 Tag="Z" />
+                                 Tag="Z"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.05" />
                         <Button Content="+" Width="20" Height="20"
                                 FontSize="10" Padding="0"
                                 Click="OnPositionIncrement_Click"
@@ -140,7 +148,9 @@
                                  TextAlignment="Right"
                                  LostFocus="OnRotationText_LostFocus"
                                  PreviewKeyDown="OnRotationText_KeyDown"
-                                 Tag="X" />
+                                 Tag="X"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.1" />
                         <Button Content="+" Width="20" Height="20"
                                 FontSize="10" Padding="0"
                                 Click="OnRotationIncrement_Click"
@@ -162,7 +172,9 @@
                                  TextAlignment="Right"
                                  LostFocus="OnRotationText_LostFocus"
                                  PreviewKeyDown="OnRotationText_KeyDown"
-                                 Tag="Y" />
+                                 Tag="Y"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.1" />
                         <Button Content="+" Width="20" Height="20"
                                 FontSize="10" Padding="0"
                                 Click="OnRotationIncrement_Click"
@@ -184,7 +196,9 @@
                                  TextAlignment="Right"
                                  LostFocus="OnRotationText_LostFocus"
                                  PreviewKeyDown="OnRotationText_KeyDown"
-                                 Tag="Z" />
+                                 Tag="Z"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.1" />
                         <Button Content="+" Width="20" Height="20"
                                 FontSize="10" Padding="0"
                                 Click="OnRotationIncrement_Click"
@@ -211,7 +225,10 @@
                                  FontSize="11" Padding="2"
                                  TextAlignment="Right"
                                  LostFocus="OnScaleText_LostFocus"
-                                 PreviewKeyDown="OnScaleText_KeyDown" />
+                                 PreviewKeyDown="OnScaleText_KeyDown"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.02"
+                                 local:DraggableNumberBehavior.Minimum="0.01" />
                         <Button Content="+" Width="20" Height="20"
                                 FontSize="10" Padding="0"
                                 Click="OnScaleIncrement_Click"

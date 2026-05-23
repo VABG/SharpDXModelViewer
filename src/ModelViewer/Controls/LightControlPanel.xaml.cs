@@ -52,7 +52,7 @@ internal partial class LightControlPanel : UserControl
     private void OnSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         // Guard: during XAML initialization not all controls exist yet
-        if (YawSlider == null || PitchSlider == null || DirectionPreview == null)
+        if (YawSlider == null || PitchSlider == null)
             return;
 
         // Update the display text for the changed slider
@@ -71,9 +71,6 @@ internal partial class LightControlPanel : UserControl
 
         var direction = new Vector3(x, y, z);
         direction.Normalize();
-
-        // Update direction preview text
-        DirectionPreview.Text = $"X: {x:F2}, Y: {y:F2}, Z: {z:F2}";
 
         // Notify parent
         LightDirectionChanged?.Invoke(direction);

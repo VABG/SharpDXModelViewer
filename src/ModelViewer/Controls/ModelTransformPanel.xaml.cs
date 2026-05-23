@@ -21,8 +21,11 @@ internal partial class ModelTransformPanel : UserControl
     private const double RotationStep = 5.0;   // degrees
     private const double ScaleStep = 0.1;
 
-    // ── TextBox formatting ────────────────────────────────────────
+            // ── TextBox formatting ────────────────────────────────────────
     private const string NumberFormat = "F3";
+
+    // ── Prevent re-entrant commits during drag ────────────────────
+    private bool _isCommitting;
 
     /// <summary>Whether the panel body is currently expanded.</summary>
     public bool IsExpanded
@@ -108,7 +111,7 @@ internal partial class ModelTransformPanel : UserControl
         ScaleText.Text = t.Scale.ToString(NumberFormat, CultureInfo.InvariantCulture);
     }
 
-    // ══════════════════════════════════════════════════════════════
+            // ══════════════════════════════════════════════════════════════
     //  Sync model ← UI  (commit current text values back to the model)
     // ══════════════════════════════════════════════════════════════
 
@@ -116,26 +119,51 @@ internal partial class ModelTransformPanel : UserControl
     {
         if (_selectedModel == null) return;
 
-        var t = _selectedModel.Transform;
+        // Prevent re-entrant commits (e.g. drag → LostFocus → Commit → Refresh → drag again)
+        if (_isCommitting) return;
+        _isCommitting = true;
 
-        // ── Position ──────────────────────────────────────────────
-        if (TryParseDouble(PosXText.Text, out var px)) t.Position.X = (float)px;
-        if (TryParseDouble(PosYText.Text, out var py)) t.Position.Y = (float)py;
-        if (TryParseDouble(PosZText.Text, out var pz)) t.Position.Z = (float)pz;
+        try
+        {
+            var t = _selectedModel.Transform;
 
-        // ── Rotation (degrees → radians) ──────────────────────────
-        if (TryParseDouble(RotXText.Text, out var rx))
-            t.Rotation.X = (float)(rx * Math.PI / 180.0);
-        if (TryParseDouble(RotYText.Text, out var ry))
-            t.Rotation.Y = (float)(ry * Math.PI / 180.0);
-        if (TryParseDouble(RotZText.Text, out var rz))
-            t.Rotation.Z = (float)(rz * Math.PI / 180.0);
+            // ── Position ──────────────────────────────────────────────
+            if (TryParseDouble(PosXText.Text, out var px)) t.Position.X = (float)px;
+            if (TryParseDouble(PosYText.Text, out var py)) t.Position.Y = (float)py;
+            if (TryParseDouble(PosZText.Text, out var pz)) t.Position.Z = (float)pz;
 
-        // ── Scale (guard against zero/negative) ───────────────────
-        if (TryParseDouble(ScaleText.Text, out var sc) && sc > 0)
-            t.Scale = (float)sc;
+            // ── Rotation (degrees → radians) ──────────────────────────
+            if (TryParseDouble(RotXText.Text, out var rx))
+                t.Rotation.X = (float)(rx * Math.PI / 180.0);
+            if (TryParseDouble(RotYText.Text, out var ry))
+                t.Rotation.Y = (float)(ry * Math.PI / 180.0);
+            if (TryParseDouble(RotZText.Text, out var rz))
+                t.Rotation.Z = (float)(rz * Math.PI / 180.0);
 
-        _selectedModel.Transform = t;
+            // ── Scale (guard against zero/negative) ───────────────────
+            if (TryParseDouble(ScaleText.Text, out var sc) && sc > 0)
+                t.Scale = (float)sc;
+
+            _selectedModel.Transform = t;
+        }
+        finally
+        {
+            _isCommitting = false;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Drag-to-adjust: real-time commit while dragging on a number field
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Raised by <see cref="DraggableNumberBehavior"/> on every drag step.
+    /// Commits the new value immediately so the 3D viewport updates live.
+    /// </summary>
+    private void OnDragValueChanged(object? sender, RoutedEventArgs e)
+    {
+        // Just commit — the TextBox text is already updated by the behavior
+        CommitTransform();
     }
 
     // ══════════════════════════════════════════════════════════════
