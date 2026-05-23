@@ -19,19 +19,19 @@
                             Click="OnCollapseToggle_Click"
                             DockPanel.Dock="Right"
                             Width="18" Height="18"
-                            Tag="Expanded"/>
+                            Tag="Expanded" />
                     <!-- Title + selected model name -->
                     <StackPanel>
                         <DockPanel>
                             <TextBlock Text="Transform" Foreground="White"
                                        FontWeight="SemiBold" FontSize="12"
-                                       VerticalAlignment="Center"/>
+                                       VerticalAlignment="Center" />
                         </DockPanel>
                         <TextBlock x:Name="SelectedModelName"
                                    Text="(no selection)"
                                    Foreground="#888888" FontSize="10"
                                    TextTrimming="CharacterEllipsis"
-                                   Margin="0,1,0,0"/>
+                                   Margin="0,1,0,0" />
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -43,207 +43,211 @@
                               HorizontalScrollBarVisibility="Disabled"
                               Background="#2D2D30"
                               BorderThickness="0">
-                    <StackPanel Margin="8,6">
+                    <StackPanel>
+                        <WrapPanel Margin="0">
 
-                    <!-- ════════════════════════════════════════════ -->
-                    <!-- POSITION                                     -->
-                    <!-- ════════════════════════════════════════════ -->
-                    <TextBlock Text="Position" Foreground="#007ACC"
-                               FontWeight="SemiBold" FontSize="12"
-                               Margin="0,4,0,2" />
+                            <!-- ════════════════════════════════════════════ -->
+                            <!-- POSITION                                     -->
+                            <!-- ════════════════════════════════════════════ -->
+                            <StackPanel Margin="5">
+                                <TextBlock Text="Position" Foreground="#007ACC"
+                                           FontWeight="SemiBold" FontSize="12"
+                                           Margin="0,4,0,2" />
 
-                    <!-- X -->
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <TextBlock Text="X:" Foreground="#CCCCCC"
-                                   FontSize="11" Width="16" />
-                        <Button Content="−" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnPositionDecrement_Click"
-                                Tag="X" Margin="0,0,2,0" />
-                        <TextBox x:Name="PosXText" Width="60"
-                                 Foreground="White" Background="#3F3F46"
-                                 BorderBrush="#555555" BorderThickness="1"
-                                 FontSize="11" Padding="2"
-                                 TextAlignment="Right"
-                                 LostFocus="OnPositionText_LostFocus"
-                                 PreviewKeyDown="OnPositionText_KeyDown"
-                                 Tag="X"
-                                 local:DraggableNumberBehavior.IsEnabled="True"
-                                 local:DraggableNumberBehavior.Sensitivity="0.05" />
-                        <Button Content="+" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnPositionIncrement_Click"
-                                Tag="X" Margin="2,0,0,0" />
+                                <!-- X -->
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <TextBlock Text="X:" Foreground="#CCCCCC"
+                                               FontSize="11" Width="16" />
+                                    <Button Content="−" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnPositionDecrement_Click"
+                                            Tag="X" Margin="0,0,2,0" />
+                                    <TextBox x:Name="PosXText" Width="60"
+                                             Foreground="White" Background="#3F3F46"
+                                             BorderBrush="#555555" BorderThickness="1"
+                                             FontSize="11" Padding="2"
+                                             TextAlignment="Right"
+                                             LostFocus="OnPositionText_LostFocus"
+                                             PreviewKeyDown="OnPositionText_KeyDown"
+                                             Tag="X"
+                                             local:DraggableNumberBehavior.IsEnabled="True"
+                                             local:DraggableNumberBehavior.Sensitivity="0.05" />
+                                    <Button Content="+" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnPositionIncrement_Click"
+                                            Tag="X" Margin="2,0,0,0" />
+                                </StackPanel>
+
+                                <!-- Y -->
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <TextBlock Text="Y:" Foreground="#CCCCCC"
+                                               FontSize="11" Width="16" />
+                                    <Button Content="−" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnPositionDecrement_Click"
+                                            Tag="Y" Margin="0,0,2,0" />
+                                    <TextBox x:Name="PosYText" Width="60"
+                                             Foreground="White" Background="#3F3F46"
+                                             BorderBrush="#555555" BorderThickness="1"
+                                             FontSize="11" Padding="2"
+                                             TextAlignment="Right"
+                                             LostFocus="OnPositionText_LostFocus"
+                                             PreviewKeyDown="OnPositionText_KeyDown"
+                                             Tag="Y"
+                                             local:DraggableNumberBehavior.IsEnabled="True"
+                                             local:DraggableNumberBehavior.Sensitivity="0.05" />
+                                    <Button Content="+" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnPositionIncrement_Click"
+                                            Tag="Y" Margin="2,0,0,0" />
+                                </StackPanel>
+
+                                <!-- Z -->
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <TextBlock Text="Z:" Foreground="#CCCCCC"
+                                               FontSize="11" Width="16" />
+                                    <Button Content="−" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnPositionDecrement_Click"
+                                            Tag="Z" Margin="0,0,2,0" />
+                                    <TextBox x:Name="PosZText" Width="60"
+                                             Foreground="White" Background="#3F3F46"
+                                             BorderBrush="#555555" BorderThickness="1"
+                                             FontSize="11" Padding="2"
+                                             TextAlignment="Right"
+                                             LostFocus="OnPositionText_LostFocus"
+                                             PreviewKeyDown="OnPositionText_KeyDown"
+                                             Tag="Z"
+                                             local:DraggableNumberBehavior.IsEnabled="True"
+                                             local:DraggableNumberBehavior.Sensitivity="0.05" />
+                                    <Button Content="+" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnPositionIncrement_Click"
+                                            Tag="Z" Margin="2,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- ════════════════════════════════════════════ -->
+                            <!-- ROTATION (DEGREES)                           -->
+                            <!-- ════════════════════════════════════════════ -->
+                            <StackPanel Margin="5">
+                                <TextBlock Text="Rotation (degrees)" Foreground="#007ACC"
+                                           FontWeight="SemiBold" FontSize="12"
+                                           Margin="0,4,0,2" />
+
+                                <!-- X -->
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <TextBlock Text="X:" Foreground="#CCCCCC"
+                                               FontSize="11" Width="16" />
+                                    <Button Content="−" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnRotationDecrement_Click"
+                                            Tag="X" Margin="0,0,2,0" />
+                                    <TextBox x:Name="RotXText" Width="60"
+                                             Foreground="White" Background="#3F3F46"
+                                             BorderBrush="#555555" BorderThickness="1"
+                                             FontSize="11" Padding="2"
+                                             TextAlignment="Right"
+                                             LostFocus="OnRotationText_LostFocus"
+                                             PreviewKeyDown="OnRotationText_KeyDown"
+                                             Tag="X"
+                                             local:DraggableNumberBehavior.IsEnabled="True"
+                                             local:DraggableNumberBehavior.Sensitivity="0.1" />
+                                    <Button Content="+" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnRotationIncrement_Click"
+                                            Tag="X" Margin="2,0,0,0" />
+                                </StackPanel>
+
+                                <!-- Y -->
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <TextBlock Text="Y:" Foreground="#CCCCCC"
+                                               FontSize="11" Width="16" />
+                                    <Button Content="−" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnRotationDecrement_Click"
+                                            Tag="Y" Margin="0,0,2,0" />
+                                    <TextBox x:Name="RotYText" Width="60"
+                                             Foreground="White" Background="#3F3F46"
+                                             BorderBrush="#555555" BorderThickness="1"
+                                             FontSize="11" Padding="2"
+                                             TextAlignment="Right"
+                                             LostFocus="OnRotationText_LostFocus"
+                                             PreviewKeyDown="OnRotationText_KeyDown"
+                                             Tag="Y"
+                                             local:DraggableNumberBehavior.IsEnabled="True"
+                                             local:DraggableNumberBehavior.Sensitivity="0.1" />
+                                    <Button Content="+" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnRotationIncrement_Click"
+                                            Tag="Y" Margin="2,0,0,0" />
+                                </StackPanel>
+
+                                <!-- Z -->
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <TextBlock Text="Z:" Foreground="#CCCCCC"
+                                               FontSize="11" Width="16" />
+                                    <Button Content="−" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnRotationDecrement_Click"
+                                            Tag="Z" Margin="0,0,2,0" />
+                                    <TextBox x:Name="RotZText" Width="60"
+                                             Foreground="White" Background="#3F3F46"
+                                             BorderBrush="#555555" BorderThickness="1"
+                                             FontSize="11" Padding="2"
+                                             TextAlignment="Right"
+                                             LostFocus="OnRotationText_LostFocus"
+                                             PreviewKeyDown="OnRotationText_KeyDown"
+                                             Tag="Z"
+                                             local:DraggableNumberBehavior.IsEnabled="True"
+                                             local:DraggableNumberBehavior.Sensitivity="0.1" />
+                                    <Button Content="+" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnRotationIncrement_Click"
+                                            Tag="Z" Margin="2,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+
+
+                            <!-- ════════════════════════════════════════════ -->
+                            <!-- SCALE                                        -->
+                            <!-- ════════════════════════════════════════════ -->
+                            <StackPanel Margin="5">
+                                <TextBlock Text="Scale" Foreground="#007ACC"
+                                           FontWeight="SemiBold" FontSize="12"
+                                           Margin="0,4,0,2" />
+
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <Button Content="−" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnScaleDecrement_Click"
+                                            Margin="0,0,2,0" />
+                                    <TextBox x:Name="ScaleText" Width="60"
+                                             Foreground="White" Background="#3F3F46"
+                                             BorderBrush="#555555" BorderThickness="1"
+                                             FontSize="11" Padding="2"
+                                             TextAlignment="Right"
+                                             LostFocus="OnScaleText_LostFocus"
+                                             PreviewKeyDown="OnScaleText_KeyDown"
+                                             local:DraggableNumberBehavior.IsEnabled="True"
+                                             local:DraggableNumberBehavior.Sensitivity="0.02"
+                                             local:DraggableNumberBehavior.Minimum="0.01" />
+                                    <Button Content="+" Width="20" Height="20"
+                                            FontSize="10" Padding="0"
+                                            Click="OnScaleIncrement_Click"
+                                            Margin="2,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </WrapPanel>
+                        <!-- Reset button -->
+                        <Button Content="↺ Reset"
+                                Click="OnResetTransform_Click"
+                                Margin="5" Padding="6,3"
+                                FontSize="11" Height="24" />
                     </StackPanel>
 
-                    <!-- Y -->
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <TextBlock Text="Y:" Foreground="#CCCCCC"
-                                   FontSize="11" Width="16" />
-                        <Button Content="−" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnPositionDecrement_Click"
-                                Tag="Y" Margin="0,0,2,0" />
-                        <TextBox x:Name="PosYText" Width="60"
-                                 Foreground="White" Background="#3F3F46"
-                                 BorderBrush="#555555" BorderThickness="1"
-                                 FontSize="11" Padding="2"
-                                 TextAlignment="Right"
-                                 LostFocus="OnPositionText_LostFocus"
-                                 PreviewKeyDown="OnPositionText_KeyDown"
-                                 Tag="Y"
-                                 local:DraggableNumberBehavior.IsEnabled="True"
-                                 local:DraggableNumberBehavior.Sensitivity="0.05" />
-                        <Button Content="+" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnPositionIncrement_Click"
-                                Tag="Y" Margin="2,0,0,0" />
-                    </StackPanel>
 
-                    <!-- Z -->
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <TextBlock Text="Z:" Foreground="#CCCCCC"
-                                   FontSize="11" Width="16" />
-                        <Button Content="−" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnPositionDecrement_Click"
-                                Tag="Z" Margin="0,0,2,0" />
-                        <TextBox x:Name="PosZText" Width="60"
-                                 Foreground="White" Background="#3F3F46"
-                                 BorderBrush="#555555" BorderThickness="1"
-                                 FontSize="11" Padding="2"
-                                 TextAlignment="Right"
-                                 LostFocus="OnPositionText_LostFocus"
-                                 PreviewKeyDown="OnPositionText_KeyDown"
-                                 Tag="Z"
-                                 local:DraggableNumberBehavior.IsEnabled="True"
-                                 local:DraggableNumberBehavior.Sensitivity="0.05" />
-                        <Button Content="+" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnPositionIncrement_Click"
-                                Tag="Z" Margin="2,0,0,0" />
-                    </StackPanel>
-
-                    <Separator Background="#3F3F46" Margin="0,8" />
-
-                    <!-- ════════════════════════════════════════════ -->
-                    <!-- ROTATION (DEGREES)                           -->
-                    <!-- ════════════════════════════════════════════ -->
-                    <TextBlock Text="Rotation (degrees)" Foreground="#007ACC"
-                               FontWeight="SemiBold" FontSize="12"
-                               Margin="0,4,0,2" />
-
-                    <!-- X -->
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <TextBlock Text="X:" Foreground="#CCCCCC"
-                                   FontSize="11" Width="16" />
-                        <Button Content="−" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnRotationDecrement_Click"
-                                Tag="X" Margin="0,0,2,0" />
-                        <TextBox x:Name="RotXText" Width="60"
-                                 Foreground="White" Background="#3F3F46"
-                                 BorderBrush="#555555" BorderThickness="1"
-                                 FontSize="11" Padding="2"
-                                 TextAlignment="Right"
-                                 LostFocus="OnRotationText_LostFocus"
-                                 PreviewKeyDown="OnRotationText_KeyDown"
-                                 Tag="X"
-                                 local:DraggableNumberBehavior.IsEnabled="True"
-                                 local:DraggableNumberBehavior.Sensitivity="0.1" />
-                        <Button Content="+" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnRotationIncrement_Click"
-                                Tag="X" Margin="2,0,0,0" />
-                    </StackPanel>
-
-                    <!-- Y -->
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <TextBlock Text="Y:" Foreground="#CCCCCC"
-                                   FontSize="11" Width="16" />
-                        <Button Content="−" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnRotationDecrement_Click"
-                                Tag="Y" Margin="0,0,2,0" />
-                        <TextBox x:Name="RotYText" Width="60"
-                                 Foreground="White" Background="#3F3F46"
-                                 BorderBrush="#555555" BorderThickness="1"
-                                 FontSize="11" Padding="2"
-                                 TextAlignment="Right"
-                                 LostFocus="OnRotationText_LostFocus"
-                                 PreviewKeyDown="OnRotationText_KeyDown"
-                                 Tag="Y"
-                                 local:DraggableNumberBehavior.IsEnabled="True"
-                                 local:DraggableNumberBehavior.Sensitivity="0.1" />
-                        <Button Content="+" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnRotationIncrement_Click"
-                                Tag="Y" Margin="2,0,0,0" />
-                    </StackPanel>
-
-                    <!-- Z -->
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <TextBlock Text="Z:" Foreground="#CCCCCC"
-                                   FontSize="11" Width="16" />
-                        <Button Content="−" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnRotationDecrement_Click"
-                                Tag="Z" Margin="0,0,2,0" />
-                        <TextBox x:Name="RotZText" Width="60"
-                                 Foreground="White" Background="#3F3F46"
-                                 BorderBrush="#555555" BorderThickness="1"
-                                 FontSize="11" Padding="2"
-                                 TextAlignment="Right"
-                                 LostFocus="OnRotationText_LostFocus"
-                                 PreviewKeyDown="OnRotationText_KeyDown"
-                                 Tag="Z"
-                                 local:DraggableNumberBehavior.IsEnabled="True"
-                                 local:DraggableNumberBehavior.Sensitivity="0.1" />
-                        <Button Content="+" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnRotationIncrement_Click"
-                                Tag="Z" Margin="2,0,0,0" />
-                    </StackPanel>
-
-                    <Separator Background="#3F3F46" Margin="0,8" />
-
-                    <!-- ════════════════════════════════════════════ -->
-                    <!-- SCALE                                        -->
-                    <!-- ════════════════════════════════════════════ -->
-                    <TextBlock Text="Scale" Foreground="#007ACC"
-                               FontWeight="SemiBold" FontSize="12"
-                               Margin="0,4,0,2" />
-
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <Button Content="−" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnScaleDecrement_Click"
-                                Margin="0,0,2,0" />
-                        <TextBox x:Name="ScaleText" Width="60"
-                                 Foreground="White" Background="#3F3F46"
-                                 BorderBrush="#555555" BorderThickness="1"
-                                 FontSize="11" Padding="2"
-                                 TextAlignment="Right"
-                                 LostFocus="OnScaleText_LostFocus"
-                                 PreviewKeyDown="OnScaleText_KeyDown"
-                                 local:DraggableNumberBehavior.IsEnabled="True"
-                                 local:DraggableNumberBehavior.Sensitivity="0.02"
-                                 local:DraggableNumberBehavior.Minimum="0.01" />
-                        <Button Content="+" Width="20" Height="20"
-                                FontSize="10" Padding="0"
-                                Click="OnScaleIncrement_Click"
-                                Margin="2,0,0,0" />
-                    </StackPanel>
-
-                    <Separator Background="#3F3F46" Margin="0,8" />
-
-                    <!-- Reset button -->
-                    <Button Content="↺ Reset Transform"
-                            Click="OnResetTransform_Click"
-                            Margin="0,4,0,0" Padding="6,3"
-                            FontSize="11" Height="24" />
-                </StackPanel>
-            </ScrollViewer>
+                </ScrollViewer>
             </Grid>
         </DockPanel>
     </Border>
