@@ -20,14 +20,14 @@ public class Renderer : IDisposable
     private readonly Camera _camera;
     private readonly InputHandler _inputHandler;
 
-        // Shader pipeline resources
+    // Shader pipeline resources
     private VertexShader? _vertexShader;
     private PixelShader? _pixelShader;
     private InputLayout? _inputLayout;
     private ShaderSignature? _inputSignature;
     private readonly SharpDX.Direct3D11.Buffer? _viewProjectionBuffer;
 
-        // ── Shadow map resources ──
+    // ── Shadow map resources ──
     private ShadowMap? _shadowMap;
     private VertexShader? _shadowVertexShader;
     private PixelShader? _shadowPixelShader;
@@ -37,10 +37,10 @@ public class Renderer : IDisposable
     private SharpDX.Direct3D11.Buffer? _worldMatrixBuffer;
 
     // Scene state
-    private Model? _currentModel;
+    private readonly ModelList _modelList = new();
     private readonly Grid? _grid;
 
-                // Render loop state
+    // Render loop state
     private readonly CancellationTokenSource _cts = new();
     private Task? _renderLoopTask;
     private Task? _updateLoopTask;
@@ -58,6 +58,7 @@ public class Renderer : IDisposable
         // It internally negates it to store the direction pointing TO the light.
         _shadowMap.UpdateLightCamera(direction, sceneRadius: 100f, sceneHeight: 50f);
     }
+
     private readonly Stopwatch _fpsWatch = new();
     private int _lastWidth;
     private int _lastHeight;
@@ -94,7 +95,7 @@ public class Renderer : IDisposable
         };
         _viewProjectionBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, cbDesc);
 
-                // ── Create shadow constant buffer (holds LightViewProjection matrix + LightDirection) ──
+        // ── Create shadow constant buffer (holds LightViewProjection matrix + LightDirection) ──
         var shadowCbDesc = new BufferDescription
         {
             SizeInBytes = Marshal.SizeOf<ShadowConstantBuffer>(),
@@ -103,9 +104,9 @@ public class Renderer : IDisposable
             CpuAccessFlags = CpuAccessFlags.Write,
             OptionFlags = ResourceOptionFlags.None,
         };
-                _shadowConstantBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, shadowCbDesc);
+        _shadowConstantBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, shadowCbDesc);
 
-                // ── Create world matrix constant buffer (cbuffer b2, one 4×4 matrix = 64 bytes) ──
+        // ── Create world matrix constant buffer (cbuffer b2, one 4×4 matrix = 64 bytes) ──
         var worldCbDesc = new BufferDescription
         {
             SizeInBytes = Marshal.SizeOf<Matrix>(),
@@ -124,104 +125,104 @@ public class Renderer : IDisposable
         StartRenderLoop();
     }
 
-        private void CompileAndLoadShaders()
+    private void CompileAndLoadShaders()
+    {
+        var device = _deviceManager.Device;
+
+        // Load and compile shaders from .hlsl files
+        var vsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shaders", "VertexShader.hlsl");
+        var psFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shaders", "PixelShader.hlsl");
+
+        if (!File.Exists(vsFilePath))
+            throw new FileNotFoundException($"Vertex shader file not found: {vsFilePath}");
+        if (!File.Exists(psFilePath))
+            throw new FileNotFoundException($"Pixel shader file not found: {psFilePath}");
+
+        // ── Compile vertex shader ──
+        ShaderBytecode vsBlob;
+        try
         {
-            var device = _deviceManager.Device;
-
-            // Load and compile shaders from .hlsl files
-            var vsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shaders", "VertexShader.hlsl");
-            var psFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shaders", "PixelShader.hlsl");
-
-            if (!File.Exists(vsFilePath))
-                throw new FileNotFoundException($"Vertex shader file not found: {vsFilePath}");
-            if (!File.Exists(psFilePath))
-                throw new FileNotFoundException($"Pixel shader file not found: {psFilePath}");
-
-            // ── Compile vertex shader ──
-            ShaderBytecode vsBlob;
-            try
-            {
-                vsBlob = ShaderBytecode.CompileFromFile(vsFilePath, "VSMain", "vs_4_0");
-            }
-            catch (SharpDXException ex)
-            {
-                throw new InvalidOperationException(
-                    $"Vertex shader compilation failed ({vsFilePath}):\n\n{ex.Message}", ex);
-            }
-
-            _inputSignature = ShaderSignature.GetInputSignature(vsBlob);
-            _vertexShader = new VertexShader(device, vsBlob);
-
-            // ── Compile pixel shader ──
-            ShaderBytecode psBlob;
-            try
-            {
-                psBlob = ShaderBytecode.CompileFromFile(psFilePath, "PSMain", "ps_4_0");
-            }
-            catch (SharpDXException ex)
-            {
-                throw new InvalidOperationException(
-                    $"Pixel shader compilation failed ({psFilePath}):\n\n{ex.Message}", ex);
-            }
-
-            _pixelShader = new PixelShader(device, psBlob);
-
-            var layoutElements = new[]
-            {
-                new InputElement("Position", 0, Format.R32G32B32_Float, 0),
-                new InputElement("Normal",   0, Format.R32G32B32_Float, 0),
-                new InputElement("TexCoord", 0, Format.R32G32_Float,   0),
-            };
-            _inputLayout = new InputLayout(device, _inputSignature, layoutElements);
-
-            vsBlob.Dispose();
-            psBlob.Dispose();
+            vsBlob = ShaderBytecode.CompileFromFile(vsFilePath, "VSMain", "vs_4_0");
+        }
+        catch (SharpDXException ex)
+        {
+            throw new InvalidOperationException(
+                $"Vertex shader compilation failed ({vsFilePath}):\n\n{ex.Message}", ex);
         }
 
-        /// <summary>
-        /// Creates the shadow map texture and compiles the depth-pass shaders.
-        /// </summary>
-        private void InitializeShadowMap()
+        _inputSignature = ShaderSignature.GetInputSignature(vsBlob);
+        _vertexShader = new VertexShader(device, vsBlob);
+
+        // ── Compile pixel shader ──
+        ShaderBytecode psBlob;
+        try
         {
-            var device = _deviceManager.Device;
-
-            // ── Create the shadow map (2048x2048, orthographic skylight) ──
-            _shadowMap = new ShadowMap(device, shadowSize: 2048);
-
-            // ── Compile depth-pass vertex shader ──
-            var shadowVsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                "Shaders", "VertexShaderShadow.hlsl");
-
-            try
-            {
-                var shadowVsBlob = ShaderBytecode.CompileFromFile(shadowVsPath, "VSMain", "vs_4_0");
-                _shadowVertexShader = new VertexShader(device, shadowVsBlob);
-                shadowVsBlob.Dispose();
-            }
-            catch (SharpDXException ex)
-            {
-                throw new InvalidOperationException(
-                    $"Shadow vertex shader compilation failed ({shadowVsPath}):\n\n{ex.Message}", ex);
-            }
-
-            // ── Compile depth-pass pixel shader ──
-            var shadowPsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                "Shaders", "PixelShaderShadow.hlsl");
-
-            try
-            {
-                var shadowPsBlob = ShaderBytecode.CompileFromFile(shadowPsPath, "PSMain", "ps_4_0");
-                _shadowPixelShader = new PixelShader(device, shadowPsBlob);
-                shadowPsBlob.Dispose();
-            }
-            catch (SharpDXException ex)
-            {
-                throw new InvalidOperationException(
-                    $"Shadow pixel shader compilation failed ({shadowPsPath}):\n\n{ex.Message}", ex);
-            }
+            psBlob = ShaderBytecode.CompileFromFile(psFilePath, "PSMain", "ps_4_0");
+        }
+        catch (SharpDXException ex)
+        {
+            throw new InvalidOperationException(
+                $"Pixel shader compilation failed ({psFilePath}):\n\n{ex.Message}", ex);
         }
 
-                private void StartRenderLoop()
+        _pixelShader = new PixelShader(device, psBlob);
+
+        var layoutElements = new[]
+        {
+            new InputElement("Position", 0, Format.R32G32B32_Float, 0),
+            new InputElement("Normal", 0, Format.R32G32B32_Float, 0),
+            new InputElement("TexCoord", 0, Format.R32G32_Float, 0),
+        };
+        _inputLayout = new InputLayout(device, _inputSignature, layoutElements);
+
+        vsBlob.Dispose();
+        psBlob.Dispose();
+    }
+
+    /// <summary>
+    /// Creates the shadow map texture and compiles the depth-pass shaders.
+    /// </summary>
+    private void InitializeShadowMap()
+    {
+        var device = _deviceManager.Device;
+
+        // ── Create the shadow map (2048x2048, orthographic skylight) ──
+        _shadowMap = new ShadowMap(device, shadowSize: 2048);
+
+        // ── Compile depth-pass vertex shader ──
+        var shadowVsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+            "Shaders", "VertexShaderShadow.hlsl");
+
+        try
+        {
+            var shadowVsBlob = ShaderBytecode.CompileFromFile(shadowVsPath, "VSMain", "vs_4_0");
+            _shadowVertexShader = new VertexShader(device, shadowVsBlob);
+            shadowVsBlob.Dispose();
+        }
+        catch (SharpDXException ex)
+        {
+            throw new InvalidOperationException(
+                $"Shadow vertex shader compilation failed ({shadowVsPath}):\n\n{ex.Message}", ex);
+        }
+
+        // ── Compile depth-pass pixel shader ──
+        var shadowPsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+            "Shaders", "PixelShaderShadow.hlsl");
+
+        try
+        {
+            var shadowPsBlob = ShaderBytecode.CompileFromFile(shadowPsPath, "PSMain", "ps_4_0");
+            _shadowPixelShader = new PixelShader(device, shadowPsBlob);
+            shadowPsBlob.Dispose();
+        }
+        catch (SharpDXException ex)
+        {
+            throw new InvalidOperationException(
+                $"Shadow pixel shader compilation failed ({shadowPsPath}):\n\n{ex.Message}", ex);
+        }
+    }
+
+    private void StartRenderLoop()
     {
         _fpsWatch.Restart();
         _renderLoopTask = Task.Run(() => RenderLoop(_cts.Token));
@@ -382,10 +383,15 @@ public class Renderer : IDisposable
                 context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
                 context.ClearDepthStencilView(depthStencilView, DepthStencilClearFlags.Depth, 1.0f, 0);
 
-                                                                // ── Camera ─────────────────────────────────────────────────────
-                                _camera.UpdateProjection(width, height);
+                // ── Camera ─────────────────────────────────────────────────────
+                _camera.UpdateProjection(width, height);
 
-                                // ═══════════════════════════════════════════════════════════════
+                // ── Take a thread-safe snapshot of scene models ──
+                // This snapshot is valid for the entire frame and is used in both
+                // the shadow depth pass and the main scene pass.
+                var snapshot = _modelList.GetSnapshot();
+
+                // ═══════════════════════════════════════════════════════════════
                 //  SHADOW MAP DEPTH PASS
                 //  Render the scene from the light's perspective into the shadow map.
                 // ═══════════════════════════════════════════════════════════════
@@ -415,12 +421,12 @@ public class Renderer : IDisposable
                     context.PixelShader.Set(_shadowPixelShader);
                     context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
 
-                                        // ── Draw grid into shadow map ──
+                    // ── Draw grid into shadow map ──
                     DrawObject(context, _grid!);
 
-                    // ── Draw model into shadow map ──
-                    if (_currentModel != null)
-                        DrawObject(context, _currentModel);
+                    // ── Draw all scene models into shadow map ──
+                    foreach (var sm in snapshot)
+                        DrawObject(context, sm.Model);
                 }
 
                 // ═══════════════════════════════════════════════════════════════
@@ -457,7 +463,7 @@ public class Renderer : IDisposable
                 context.PixelShader.Set(_pixelShader);
                 context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
 
-                                // ── Bind shadow matrices at cbuffer slot b1 (vertex + pixel shader) ──
+                // ── Bind shadow matrices at cbuffer slot b1 (vertex + pixel shader) ──
                 if (_shadowMap != null && _shadowConstantBuffer != null)
                 {
                     context.VertexShader.SetConstantBuffer(1, _shadowConstantBuffer);
@@ -473,15 +479,15 @@ public class Renderer : IDisposable
                 context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
                 context.Rasterizer.State = _deviceManager.RasterizerState;
 
-                                                                                // ── Draw grid (always visible) ─────────────────────────────────
+                // ── Draw grid (always visible) ─────────────────────────────────
                 DrawObject(context, _grid!);
 
-                // ── Draw model ─────────────────────────────────────────────────
-                if (_currentModel != null)
-                    DrawObject(context, _currentModel);
+                // ── Draw all scene models ────────────────────────────────────
+                foreach (var sm in snapshot)
+                    DrawObject(context, sm.Model);
 
-                                // ── Unbind shadow map resources (good practice before present) ──
-                                context.PixelShader.SetShaderResource(0, null);
+                // ── Unbind shadow map resources (good practice before present) ──
+                context.PixelShader.SetShaderResource(0, null);
 
                 // ── Present ────────────────────────────────────────────────────
                 _surface.Present();
@@ -512,10 +518,32 @@ public class Renderer : IDisposable
         }
     }
 
+    /// <summary>
+    /// Adds a model to the scene. Multiple models can be loaded simultaneously.
+    /// </summary>
+    public SceneModel AddModel(string filePath)
+    {
+        return _modelList.Add(_deviceManager.Device, filePath);
+    }
+
+    /// <summary>
+    /// Removes a model from the scene and disposes its GPU resources.
+    /// </summary>
+    public bool RemoveModel(SceneModel sceneModel)
+    {
+        return _modelList.Remove(sceneModel);
+    }
+
+    /// <summary>
+    /// Gets the model list for UI binding.
+    /// </summary>
+    public ModelList ModelList => _modelList;
+
+    // Legacy alias for backward compatibility
     public void LoadModel(string filePath)
     {
-        _currentModel?.Dispose();
-        _currentModel = Model.Load(_deviceManager.Device, filePath);
+        _modelList.Clear();
+        _modelList.Add(_deviceManager.Device, filePath);
     }
 
     public void ResetCamera()
@@ -524,13 +552,13 @@ public class Renderer : IDisposable
     }
 
     public void Dispose()
-        {
+    {
         _cts.Cancel();
         _renderLoopTask?.Wait(2000);
         _updateLoopTask?.Wait(2000);
 
         _inputHandler.Dispose();
-        _currentModel?.Dispose();
+        _modelList.Dispose();
         _grid?.Dispose();
         _shadowMap?.Dispose();
         _shadowVertexShader?.Dispose();
