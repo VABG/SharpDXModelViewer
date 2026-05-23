@@ -47,8 +47,8 @@ internal partial class ModelTransformPanel : UserControl
     {
         InitializeComponent();
         SetEnabled(false);
-        // Default: collapsed
-        IsExpanded = false;
+        // Default: expanded
+        IsExpanded = true;
     }
 
     /// <summary>Toggles the panel body visibility.</summary>

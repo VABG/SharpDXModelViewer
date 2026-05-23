@@ -39,8 +39,8 @@ internal partial class LightControlPanel : UserControl
     public LightControlPanel()
     {
         InitializeComponent();
-        // Default: collapsed
-        IsExpanded = false;
+        // Default: expanded
+        IsExpanded = true;
     }
 
     /// <summary>Toggles the panel body visibility.</summary>

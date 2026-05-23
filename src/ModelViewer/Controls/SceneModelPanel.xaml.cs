@@ -55,8 +55,8 @@ internal partial class SceneModelPanel : UserControl
         ModelListBox.ItemsSource = Models;
         ModelListBox.PreviewKeyDown += OnPreviewKeyDown;
         ModelListBox.SelectionChanged += OnModelListBoxSelectionChanged;
-        // Default: collapsed
-        IsExpanded = false;
+        // Default: expanded
+        IsExpanded = true;
     }
 
     /// <summary>Toggles the panel body visibility.</summary>
@@ -126,6 +126,19 @@ internal partial class SceneModelPanel : UserControl
             OnRemoveSelected_Click(sender, e);
             e.Handled = true;
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Public API — call from MainWindow to programmatically select
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Selects a specific scene model in the ListBox. Pass <c>null</c> to
+    /// clear the selection.
+    /// </summary>
+    public void SelectModel(SceneModel? model)
+    {
+        ModelListBox.SelectedItem = model;
     }
 
     // ── ListBox selection change → notify parent ───────────────────────
