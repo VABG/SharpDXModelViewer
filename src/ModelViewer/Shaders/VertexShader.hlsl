@@ -7,9 +7,14 @@ cbuffer ViewProjection : register(b0)
 // ── Shadow light matrices + direction (bound at b1 during main scene pass) ──
 cbuffer ShadowMatrices : register(b1)
 {
-    matrix LightViewProjection;  // Light View × Projection (ortho)
-    float3 LightDirection;       // Direction pointing TO the light source
-    float Padding;               // Alignment padding
+    matrix LightViewProjection;
+    float3 LightDirection; // Direction pointing TO the light source
+    float Padding;
+    float PcfRadius; // PCF sample spread in texels (0 = hard shadows)
+    float ShadowBias; // Base depth bias to prevent shadow acne
+    float ShadowNormalBias;
+    float4 LightColor;
+    float4 AmbientColor;
 };
 
 // ── Per-object world transform (bound at b2 for each draw call) ──
@@ -54,7 +59,7 @@ VSOutput VSMain(VSInput input)
     float normalOffset = saturate(dot(output.WorldNormal, LightDirection));
     
     float4 worldPosLight = worldPos;
-    worldPosLight.xyz += worldNormal * normalOffset * 0.05;
+    worldPosLight.xyz += worldNormal * normalOffset * ShadowNormalBias;
     
     output.LightClipPos = mul(worldPosLight, LightViewProjection);
 

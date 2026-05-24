@@ -37,6 +37,9 @@ cbuffer ShadowMatrices : register(b1)
     float Padding;
     float PcfRadius; // PCF sample spread in texels (0 = hard shadows)
     float ShadowBias; // Base depth bias to prevent shadow acne
+    float ShadowNormalBias;
+    float4 LightColor;
+    float4 AmbientColor;
 };
 
 /// <summary>
@@ -120,10 +123,10 @@ float ComputeShadowFactor(float4 lightClipPos)
 
 float4 PSMain(VSOutput input) : SV_TARGET
 {
-    // ── Light direction comes from the cbuffer (matches ShadowMap) ──
+    // ── Lighting parameters come from the cbuffer ──
     float3 lightDir = normalize(LightDirection);
-    float3 lightColor = float3(1.0, 0.95, 0.9);
-    float3 ambientColor = float3(0.15, 0.15, 0.18);
+    float3 lightColor = LightColor;
+    float3 ambientColor = AmbientColor;
     float3 diffuseColor = float3(0.5, 0.5, 0.5);
 
     float3 normal = normalize(input.WorldNormal);

@@ -48,8 +48,10 @@ public partial class MainWindow : Window
                                     ScenePanel.ClearSceneRequested += OnClearSceneRequested;
                                     ScenePanel.SelectionChanged += OnSceneModelSelectionChanged;
 
-            // ── Wire up light-control panel ─────────────────────────────
+                        // ── Wire up light-control panel ─────────────────────────────
             LightPanel.LightDirectionChanged += _renderer.SetLightDirection;
+            LightPanel.ShadowParamsChanged += _renderer.SetShadowParams;
+            LightPanel.LightColorsChanged += _renderer.SetLightColors;
 
             StatusBar.StatusText = "Ready";
         }

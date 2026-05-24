@@ -40,11 +40,19 @@ public class Renderer : IDisposable
     private readonly ModelList _modelList = new();
     private readonly Grid? _grid;
 
-    // Render loop state
+        // Render loop state
     private readonly CancellationTokenSource _cts = new();
     private Task? _renderLoopTask;
     private Task? _updateLoopTask;
     private int _frameCount;
+
+    // ── Lighting parameters (mutable, updated from UI thread) ──
+    private float _pcfRadius = 1.0f;
+    private float _shadowBias = 0.002f;
+    private float _shadowNormalBias = 0.05f;
+    private Vector4 _lightColor = new(1.0f, 0.95f, 0.9f, 1.0f);
+    private Vector4 _ambientColor = new(0.15f, 0.15f, 0.18f, 1.0f);
+    private readonly object _lightLock = new();
 
     /// <summary>
     /// Updates the light direction for shadow mapping and diffuse lighting.
@@ -57,6 +65,33 @@ public class Renderer : IDisposable
         // ShadowMap.UpdateLightCamera expects the direction the light shines FROM.
         // It internally negates it to store the direction pointing TO the light.
         _shadowMap.UpdateLightCamera(direction, sceneRadius: 150f, sceneHeight: 100f);
+    }
+
+    /// <summary>
+    /// Updates shadow quality parameters (PcfRadius, ShadowBias, ShadowNormalBias).
+    /// Call from the UI thread; the change takes effect on the next frame.
+    /// </summary>
+    public void SetShadowParams(float pcfRadius, float shadowBias, float shadowNormalBias)
+    {
+        lock (_lightLock)
+        {
+            _pcfRadius = pcfRadius;
+            _shadowBias = shadowBias;
+            _shadowNormalBias = shadowNormalBias;
+        }
+    }
+
+    /// <summary>
+    /// Updates light and ambient colors.
+    /// Call from the UI thread; the change takes effect on the next frame.
+    /// </summary>
+    public void SetLightColors(Vector4 lightColor, Vector4 ambientColor)
+    {
+        lock (_lightLock)
+        {
+            _lightColor = lightColor;
+            _ambientColor = ambientColor;
+        }
     }
 
     private readonly Stopwatch _fpsWatch = new();
@@ -403,9 +438,20 @@ public class Renderer : IDisposable
                     // Set viewport to shadow map size
                     context.Rasterizer.SetViewport(0, 0, _shadowMap.Size, _shadowMap.Size);
 
-                    // Update shadow constant buffer with LightViewProjection matrix + LightDirection
+                                        // Update shadow constant buffer with LightViewProjection matrix + LightDirection
                     var cb = new ShadowConstantBuffer(_shadowMap.LightViewProjectionMatrix, _shadowMap.LightDirection);
                     cb.LightViewProjection.Transpose();
+
+                    // Apply current UI-controlled lighting parameters
+                    lock (_lightLock)
+                    {
+                        cb.PcfRadius = _pcfRadius;
+                        cb.ShadowBias = _shadowBias;
+                        cb.ShadowNormalBias = _shadowNormalBias;
+                        cb.LightColor = _lightColor;
+                        cb.AmbientColor = _ambientColor;
+                    }
+
                     context.MapSubresource(_shadowConstantBuffer, MapMode.WriteDiscard,
                         MapFlags.None, out var shadowData);
                     Marshal.StructureToPtr(cb, shadowData.DataPointer, false);

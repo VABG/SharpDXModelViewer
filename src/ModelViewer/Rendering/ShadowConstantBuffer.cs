@@ -7,24 +7,25 @@ namespace ModelViewer.Rendering;
 /// Constant buffer data uploaded to the GPU each frame for shadow/lighting.
 /// Layout must match the HLSL cbuffer exactly.
 /// 
-/// HLSL cbuffer (b1):
-///   matrix LightViewProjection;  // 64 bytes (4x16 floats)
-///   float3 LightDirection;       // 12 bytes
-///   float Padding;              // 4 bytes (to align to 16-byte boundary)
-///   float PcfRadius;            // 4 bytes (PCF soft shadow radius in texels)
-///   float ShadowBias;           // 4 bytes (depth bias to prevent shadow acne)
-///   = 80 bytes total (5 floats in the second vector register slot)
+/// HLSL cbuffer (b1) register layout (128 bytes = 8 vector registers):
+///   b1[0..3]: matrix LightViewProjection;        // 64 bytes
+///   b1[4]:    float3 LightDirection + Padding;   // 16 bytes
+///   b1[5]:    float PcfRadius + ShadowBias + pad;// 16 bytes
+///   b1[6]:    float3 LightColor + pad;           // 16 bytes
+///   b1[7]:    float3 AmbientColor + pad;         // 16 bytes
 /// </summary>
-[StructLayout(LayoutKind.Sequential, Pack = 16)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct ShadowConstantBuffer
 {
     public Matrix LightViewProjection;   // 64 bytes
     public Vector3 LightDirection;       // 12 bytes
-    public float Padding;               // 4 bytes (alignment)
-    public float PcfRadius;             // 4 bytes (0 = hard shadows, ~2-4 = soft)
-    public float ShadowBias;            // 4 bytes (typically 0.001 - 0.005)
-    public float _pad0;                // 4 bytes (pad to 16-byte boundary)
-    public float _pad1;                // 4 bytes (pad to 16-byte boundary)
+    public float Padding;               // 4 bytes (fills b1[4])
+    public float PcfRadius;             // 4 bytes (b1[5].x)
+    public float ShadowBias;            // 4 bytes (b1[5].y)
+    public float ShadowNormalBias;      // 4 Bytes
+    public float Padding2;               // 4 bytes (fills b1[4])
+    public Vector4 LightColor;          // 16 bytes (b1[6].xyz)
+    public Vector4 AmbientColor;        // 16 bytes (b1[7].xyz)
 
     public ShadowConstantBuffer(Matrix lightViewProj, Vector3 lightDir,
         float pcfRadius = 1.0f, float shadowBias = 0.002f)
@@ -34,7 +35,9 @@ public struct ShadowConstantBuffer
         Padding = 0f;
         PcfRadius = pcfRadius;
         ShadowBias = shadowBias;
-        _pad0 = 0f;
-        _pad1 = 0f;
+        ShadowNormalBias = 0.05f;
+        LightColor = new Vector4(1.0f, 0.95f, 0.9f, 1.0f);
+        AmbientColor = new Vector4(0.15f, 0.15f, 0.18f, 1.0f);
     }
 }
+
