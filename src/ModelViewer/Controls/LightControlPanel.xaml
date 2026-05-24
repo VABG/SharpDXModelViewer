@@ -21,7 +21,7 @@
                             Width="18" Height="18"
                             Tag="Expanded"/>
                     <!-- Title -->
-                    <TextBlock Text="Light" Foreground="White"
+                    <TextBlock Text="Directional Light" Foreground="White"
                                FontWeight="SemiBold" FontSize="12"
                                VerticalAlignment="Center"/>
                 </DockPanel>
@@ -58,74 +58,84 @@
                     <!-- ═══════════════════════════════════════════ -->
                     <!--  SHADOW PARAMETERS                           -->
                     <!-- ═══════════════════════════════════════════ -->
-                    <TextBlock Text="Shadows" Foreground="#999999" FontSize="10"
+                    <TextBlock Text="Shadow Settings" Foreground="#999999" FontSize="10"
                                FontWeight="SemiBold" Margin="5,4,5,0" />
-
+                    
                     <!-- PcfRadius -->
-                    <TextBlock Text="PcfRadius:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
-                    <TextBox x:Name="PcfRadiusText"
-                             Text="1.000"
-                             Width="80"
-                             Margin="5,0,5,4"
-                             Padding="2,1"
-                             Background="#3F3F46"
-                             Foreground="White"
-                             BorderBrush="#555555"
-                             BorderThickness="1"
-                             HorizontalAlignment="Left"
-                             HorizontalContentAlignment="Center"
-                             VerticalContentAlignment="Center"
-                             FontSize="11"
-                             LostFocus="OnShadowText_LostFocus"
-                             PreviewKeyDown="OnShadowText_KeyDown"
-                             local:DraggableNumberBehavior.IsEnabled="True"
-                             local:DraggableNumberBehavior.Sensitivity="0.05"
-                             local:DraggableNumberBehavior.Minimum="0"
-                             local:DraggableNumberBehavior.Maximum="8" />
+                    <DockPanel>
+                        <TextBlock Text="Pcf Radius:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
+                        <TextBox x:Name="PcfRadiusText"
+                                 Text="1.000"
+                                 DockPanel.Dock="Right"
+                                 HorizontalAlignment="Right"
+                                 Width="45"
+                                 Margin="5,0,5,4"
+                                 Padding="2,1"
+                                 Background="#3F3F46"
+                                 Foreground="White"
+                                 BorderBrush="#555555"
+                                 BorderThickness="1"
+                                 HorizontalContentAlignment="Center"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="11"
+                                 LostFocus="OnShadowText_LostFocus"
+                                 PreviewKeyDown="OnShadowText_KeyDown"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.05"
+                                 local:DraggableNumberBehavior.Minimum="0"
+                                 local:DraggableNumberBehavior.Maximum="8" />
+                    </DockPanel>
 
                     <!-- ShadowBias -->
-                    <TextBlock Text="ShadowBias:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
-                    <TextBox x:Name="ShadowBiasText"
-                             Text="0.002"
-                             Width="80"
-                             Margin="5,0,5,4"
-                             Padding="2,1"
-                             Background="#3F3F46"
-                             Foreground="White"
-                             BorderBrush="#555555"
-                             BorderThickness="1"
-                             HorizontalAlignment="Left"
-                             HorizontalContentAlignment="Center"
-                             VerticalContentAlignment="Center"
-                             FontSize="11"
-                             LostFocus="OnShadowText_LostFocus"
-                             PreviewKeyDown="OnShadowText_KeyDown"
-                             local:DraggableNumberBehavior.IsEnabled="True"
-                             local:DraggableNumberBehavior.Sensitivity="0.001"
-                             local:DraggableNumberBehavior.Minimum="0"
-                             local:DraggableNumberBehavior.Maximum="0.05" />
+                    <DockPanel>
+                        <TextBlock Text="Shadow Bias:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
+                        <TextBox x:Name="ShadowBiasText"
+                                 DockPanel.Dock="Right"
+                                 HorizontalAlignment="Right"
+                                 Text="0.002"
+                                 Width="45"
+                                 Margin="5,0,5,4"
+                                 Padding="2,1"
+                                 Background="#3F3F46"
+                                 Foreground="White"
+                                 BorderBrush="#555555"
+                                 BorderThickness="1"
+                                 HorizontalContentAlignment="Center"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="11"
+                                 LostFocus="OnShadowText_LostFocus"
+                                 PreviewKeyDown="OnShadowText_KeyDown"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.001"
+                                 local:DraggableNumberBehavior.Minimum="0"
+                                 local:DraggableNumberBehavior.Maximum="0.05" />
+                    </DockPanel>
 
                     <!-- ShadowNormalBias -->
-                    <TextBlock Text="NormalBias:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
-                    <TextBox x:Name="ShadowNormalBiasText"
-                             Text="0.050"
-                             Width="80"
-                             Margin="5,0,5,8"
-                             Padding="2,1"
-                             Background="#3F3F46"
-                             Foreground="White"
-                             BorderBrush="#555555"
-                             BorderThickness="1"
-                             HorizontalAlignment="Left"
-                             HorizontalContentAlignment="Center"
-                             VerticalContentAlignment="Center"
-                             FontSize="11"
-                             LostFocus="OnShadowText_LostFocus"
-                             PreviewKeyDown="OnShadowText_KeyDown"
-                             local:DraggableNumberBehavior.IsEnabled="True"
-                             local:DraggableNumberBehavior.Sensitivity="0.005"
-                             local:DraggableNumberBehavior.Minimum="0"
-                             local:DraggableNumberBehavior.Maximum="1" />
+                    <DockPanel>
+                        <TextBlock Text="Normal Bias:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
+                        <TextBox x:Name="ShadowNormalBiasText"
+                                 DockPanel.Dock="Right"
+                                 HorizontalAlignment="Right"
+                                 Text="0.050"
+                                 Width="45"
+                                 Margin="5,0,5,8"
+                                 Padding="2,1"
+                                 Background="#3F3F46"
+                                 Foreground="White"
+                                 BorderBrush="#555555"
+                                 BorderThickness="1"
+                                 HorizontalContentAlignment="Center"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="11"
+                                 LostFocus="OnShadowText_LostFocus"
+                                 PreviewKeyDown="OnShadowText_KeyDown"
+                                 local:DraggableNumberBehavior.IsEnabled="True"
+                                 local:DraggableNumberBehavior.Sensitivity="0.005"
+                                 local:DraggableNumberBehavior.Minimum="0"
+                                 local:DraggableNumberBehavior.Maximum="1" />
+                    </DockPanel>
+                 
 
                     <!-- ═══════════════════════════════════════════ -->
                     <!--  COLORS                                      -->
@@ -134,31 +144,25 @@
                                FontWeight="SemiBold" Margin="5,4,5,0" />
 
                     <!-- LightColor -->
-                    <TextBlock Text="LightColor:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
                     <DockPanel Margin="0,0,0,6">
+                        <TextBlock Text="LightColor:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
                         <Button x:Name="LightColorBtn" Width="22" Height="18"
                                 BorderThickness="1" BorderBrush="#555555"
                                 Click="OnColorPickerClick" DockPanel.Dock="Right"
                                 HorizontalAlignment="Right" Margin="4,0,0,0"
                                 Background="#FDF0E0"
                                 ToolTip="Pick light color" />
-                        <TextBlock x:Name="LightColorText" Text="#FDF0E0" Foreground="#CCCCCC"
-                                   FontSize="10" DockPanel.Dock="Right" Width="50"
-                                   VerticalAlignment="Center" Margin="0,0,4,0" />
                     </DockPanel>
 
                     <!-- AmbientColor -->
-                    <TextBlock Text="AmbientColor:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
                     <DockPanel Margin="0,0,0,6">
+                        <TextBlock Text="AmbientColor:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
                         <Button x:Name="AmbientColorBtn" Width="22" Height="18"
                                 BorderThickness="1" BorderBrush="#555555"
                                 Click="OnColorPickerClick" DockPanel.Dock="Right"
                                 HorizontalAlignment="Right" Margin="4,0,0,0"
                                 Background="#262630"
                                 ToolTip="Pick ambient color" />
-                        <TextBlock x:Name="AmbientColorText" Text="#262630" Foreground="#CCCCCC"
-                                   FontSize="10" DockPanel.Dock="Right" Width="50"
-                                   VerticalAlignment="Center" Margin="0,0,4,0" />
                     </DockPanel>
 
                 </StackPanel>

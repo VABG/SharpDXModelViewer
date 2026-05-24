@@ -165,7 +165,6 @@ internal partial class LightControlPanel : UserControl
         {
             _lightR = rf; _lightG = gf; _lightB = bf;
             btn.Background = new SolidColorBrush(chosen);
-            LightColorText.Text = $"#{chosen.R:X2}{chosen.G:X2}{chosen.B:X2}";
 
             // Fire with current ambient too
             LightColorsChanged?.Invoke(
@@ -176,7 +175,6 @@ internal partial class LightControlPanel : UserControl
         {
             _ambientR = rf; _ambientG = gf; _ambientB = bf;
             btn.Background = new SolidColorBrush(chosen);
-            AmbientColorText.Text = $"#{chosen.R:X2}{chosen.G:X2}{chosen.B:X2}";
 
             // Fire with current light too
             LightColorsChanged?.Invoke(
