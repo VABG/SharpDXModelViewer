@@ -2,6 +2,9 @@ using System;
 using System.Windows;
 using Microsoft.Win32;
 using ModelViewer.Rendering;
+using ModelViewer.Messages;
+using ModelViewer.ViewModels;
+using CommunityToolkit.Mvvm.Messaging;
 using SharpDX;
 
 namespace ModelViewer;
@@ -13,6 +16,7 @@ namespace ModelViewer;
 public partial class MainWindow : Window
 {
     private Renderer? _renderer;
+    private SceneModelPanelViewModel? _sceneViewModel;
 
     public MainWindow()
     {
@@ -39,12 +43,10 @@ public partial class MainWindow : Window
             // ── Wire up status bar ──────────────────────────────────────
             _renderer.OnFpsChanged = fps => { Dispatcher.Invoke(() => StatusBar.FpsText = $"FPS: {fps}"); };
 
-            // ── Wire up scene-model panel ───────────────────────────────
-            ScenePanel.BindModels(_renderer.ModelList.ModelsCollection);
-            ScenePanel.ModelFileRequested += OnModelFileRequested;
-            ScenePanel.ModelRemovalRequested += OnModelRemovalRequested;
-            ScenePanel.ClearSceneRequested += OnClearSceneRequested;
-            ScenePanel.SelectionChanged += OnSceneModelSelectionChanged;
+                        // ── Wire up scene-model panel via MVVM ──────────────────────
+                        _sceneViewModel = new SceneModelPanelViewModel(_renderer.ModelList.ModelsCollection);
+                        ScenePanel.DataContext = _sceneViewModel;
+                        RegisterMessengerHandlers();
 
             // ── Wire up light-control panel ─────────────────────────────
             LightPanel.Settings = _renderer.DirectionalLightSettings;
@@ -62,58 +64,56 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// Cleanup renderer when window is closing.
+        /// <summary>
+    /// Cleanup renderer and messenger when window is closing.
     /// </summary>
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
         _renderer?.Dispose();
     }
 
-    // ────────────────────────────────────────────────────────────────────
-    //  Scene-model event handlers (raised by SceneModelPanel)
+        // ────────────────────────────────────────────────────────────────────
+    //  Messenger registration & handlers (replaces old event subscriptions)
     // ────────────────────────────────────────────────────────────────────
 
-    private void OnModelFileRequested(string filePath)
+    private void RegisterMessengerHandlers()
     {
-        try
+        WeakReferenceMessenger.Default.Register<AddModelRequestedMessage>(this, (recipient, message) =>
         {
-            var sceneModel = _renderer?.AddModel(filePath);
-            StatusBar.StatusText = $"Added: {System.IO.Path.GetFileName(filePath)}";
+            try
+            {
+                var sceneModel = _renderer?.AddModel(message.Value);
+                StatusBar.StatusText = $"Added: {System.IO.Path.GetFileName(message.Value)}";
+                _sceneViewModel?.SelectModel(sceneModel);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load model: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        });
 
-            // Auto-select the newly added model in the SceneModels view
-            ScenePanel.SelectModel(sceneModel);
-        }
-        catch (Exception ex)
+        WeakReferenceMessenger.Default.Register<RemoveModelRequestedMessage>(this, (recipient, message) =>
         {
-            MessageBox.Show($"Failed to load model: {ex.Message}", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
+            _renderer?.RemoveModel(message.Value);
+            StatusBar.StatusText = $"Removed: {message.Value.DisplayName}";
+        });
 
-    private void OnModelRemovalRequested(SceneModel sceneModel)
-    {
-        _renderer?.RemoveModel(sceneModel);
-        StatusBar.StatusText = $"Removed: {sceneModel.DisplayName}";
-    }
+        WeakReferenceMessenger.Default.Register<ClearSceneRequestedMessage>(this, (recipient, message) =>
+        {
+            _renderer?.ModelList.Clear();
+            StatusBar.StatusText = "Scene cleared";
+            TransformPanel.SelectModel(null);
+        });
 
-    private void OnClearSceneRequested()
-    {
-        _renderer?.ModelList.Clear();
-        StatusBar.StatusText = "Scene cleared";
-        TransformPanel.SelectModel(null);
-    }
-
-    // ────────────────────────────────────────────────────────────────────
-    //  Scene-model selection → transform panel
-    // ────────────────────────────────────────────────────────────────────
-
-    private void OnSceneModelSelectionChanged(SceneModel? selected)
-    {
-        TransformPanel.SelectModel(selected);
-        StatusBar.StatusText = selected is null
-            ? "No model selected"
-            : $"Selected: {selected.DisplayName}";
+        WeakReferenceMessenger.Default.Register<SceneModelSelectionChangedMessage>(this, (recipient, message) =>
+        {
+            TransformPanel.SelectModel(message.Value);
+            StatusBar.StatusText = message.Value is null
+                ? "No model selected"
+                : $"Selected: {message.Value.DisplayName}";
+        });
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -197,11 +197,11 @@ public partial class MainWindow : Window
 
             StatusBar.StatusText = $"Scene loaded: {System.IO.Path.GetFileName(dialog.FileName)}";
 
-            // Re-select the first model if any exist
+                        // Re-select the first model if any exist
             var models = _renderer.ModelList.GetSnapshot();
             if (models.Count > 0)
             {
-                ScenePanel.SelectModel(models[0]);
+                _sceneViewModel?.SelectModel(models[0]);
             }
             else
             {
