@@ -19,7 +19,10 @@ public partial class SceneModelPanelViewModel : ObservableObject
     public ObservableCollection<SceneModel> Models { get; }
 
     [ObservableProperty]
-    private SceneModel? selectedModel;
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private SceneModel? _selectedModel;
+
+    public bool HasSelection => SelectedModel is not null;
 
     [ObservableProperty]
     private bool isExpanded = true;
@@ -60,7 +63,7 @@ public partial class SceneModelPanelViewModel : ObservableObject
     }
 
     /// <summary>Sends a <see cref="RemoveModelRequestedMessage"/> for the selected model.</summary>
-    [RelayCommand(CanExecute = nameof(CanRemove))]
+    [RelayCommand]
     private void RemoveSelected()
     {
         if (SelectedModel is not null)
@@ -89,7 +92,6 @@ public partial class SceneModelPanelViewModel : ObservableObject
         }
     }
 
-    private bool CanRemove() => SelectedModel is not null;
 
     /// <summary>Invoked when the selected model changes — broadcasts via messenger.</summary>
     partial void OnSelectedModelChanged(SceneModel? value)
