@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using Microsoft.Win32;
 using ModelViewer.Rendering;
 using SharpDX;
 
@@ -127,11 +128,90 @@ public partial class MainWindow : Window
         _renderer?.ResetCamera();
     }
 
-    /// <summary>
+        /// <summary>
     /// Exit the application.
     /// </summary>
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    //  Scene save / load
+    // ────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Saves the current scene (models, transforms, light settings, camera) to a JSON file.
+    /// </summary>
+    private void SaveScene_Click(object sender, RoutedEventArgs e)
+    {
+        if (_renderer == null) return;
+
+        var scene = new Scene();
+        scene.CaptureFromRenderer(_renderer);
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save Scene",
+            Filter = "Scene files (*.json)|*.json|All files (*.*)|*.*",
+            DefaultExt = ".json",
+            FileName = scene.Name + ".json"
+        };
+
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            scene.SaveToFile(dialog.FileName);
+            StatusBar.StatusText = $"Scene saved: {System.IO.Path.GetFileName(dialog.FileName)}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to save scene: {ex.Message}", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Loads a scene from a JSON file, replacing the current scene.
+    /// </summary>
+    private void LoadScene_Click(object sender, RoutedEventArgs e)
+    {
+        if (_renderer == null) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Load Scene",
+            Filter = "Scene files (*.json)|*.json|All files (*.*)|*.*",
+            DefaultExt = ".json"
+        };
+
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            var scene = Scene.LoadFromFile(dialog.FileName);
+            scene.ApplyToRenderer(_renderer);
+
+            StatusBar.StatusText = $"Scene loaded: {System.IO.Path.GetFileName(dialog.FileName)}";
+
+            // Re-select the first model if any exist
+            var models = _renderer.ModelList.GetSnapshot();
+            if (models.Count > 0)
+            {
+                ScenePanel.SelectModel(models[0]);
+            }
+            else
+            {
+                TransformPanel.SelectModel(null);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to load scene: {ex.Message}", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }

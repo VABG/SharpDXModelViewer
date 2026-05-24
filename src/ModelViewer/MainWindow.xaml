@@ -23,6 +23,9 @@
         <!-- Menu bar -->
         <Menu Grid.Row="0">
             <MenuItem Header="_File">
+                <MenuItem Header="_Save Scene..." x:Name="SaveSceneMenuItem" Click="SaveScene_Click" />
+                <MenuItem Header="_Load Scene..." x:Name="LoadSceneMenuItem" Click="LoadScene_Click" />
+                <Separator />
                 <MenuItem Header="E_xit" Click="Exit_Click" />
             </MenuItem>
             <MenuItem Header="_View">
