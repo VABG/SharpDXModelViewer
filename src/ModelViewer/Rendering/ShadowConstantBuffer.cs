@@ -27,17 +27,17 @@ public struct ShadowConstantBuffer
     public Vector4 LightColor;          // 16 bytes (b1[6].xyz)
     public Vector4 AmbientColor;        // 16 bytes (b1[7].xyz)
 
-    public ShadowConstantBuffer(Matrix lightViewProj, Vector3 lightDir,
-        float pcfRadius = 1.0f, float shadowBias = 0.002f)
+        public ShadowConstantBuffer(Matrix lightViewProj, Vector3 lightDir,
+        float pcfRadius = ShadowSettings.DefaultPcfRadius, float shadowBias = ShadowSettings.DefaultShadowBias)
     {
         LightViewProjection = lightViewProj;
         LightDirection = lightDir;
         Padding = 0f;
         PcfRadius = pcfRadius;
         ShadowBias = shadowBias;
-        ShadowNormalBias = 0.05f;
-        LightColor = new Vector4(1.0f, 0.95f, 0.9f, 1.0f);
-        AmbientColor = new Vector4(0.15f, 0.15f, 0.18f, 1.0f);
+        ShadowNormalBias = ShadowSettings.DefaultShadowNormalBias;
+        LightColor = ShadowSettings.DefaultLightColor;
+        AmbientColor = ShadowSettings.DefaultAmbientColor;
     }
 }
 

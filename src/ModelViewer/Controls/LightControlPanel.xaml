@@ -65,7 +65,6 @@
                     <DockPanel>
                         <TextBlock Text="Pcf Radius:" Foreground="#CCCCCC" FontSize="11" Margin="5,2,0,0" />
                         <TextBox x:Name="PcfRadiusText"
-                                 Text="1.000"
                                  DockPanel.Dock="Right"
                                  HorizontalAlignment="Right"
                                  Width="45"
@@ -92,7 +91,6 @@
                         <TextBox x:Name="ShadowBiasText"
                                  DockPanel.Dock="Right"
                                  HorizontalAlignment="Right"
-                                 Text="0.002"
                                  Width="45"
                                  Margin="5,0,5,4"
                                  Padding="2,1"
@@ -108,7 +106,7 @@
                                  local:DraggableNumberBehavior.IsEnabled="True"
                                  local:DraggableNumberBehavior.Sensitivity="0.001"
                                  local:DraggableNumberBehavior.Minimum="0"
-                                 local:DraggableNumberBehavior.Maximum="0.05" />
+                                 local:DraggableNumberBehavior.Maximum="0.1" />
                     </DockPanel>
 
                     <!-- ShadowNormalBias -->
@@ -117,7 +115,6 @@
                         <TextBox x:Name="ShadowNormalBiasText"
                                  DockPanel.Dock="Right"
                                  HorizontalAlignment="Right"
-                                 Text="0.050"
                                  Width="45"
                                  Margin="5,0,5,8"
                                  Padding="2,1"
@@ -150,7 +147,7 @@
                                 BorderThickness="1" BorderBrush="#555555"
                                 Click="OnColorPickerClick" DockPanel.Dock="Right"
                                 HorizontalAlignment="Right" Margin="4,0,0,0"
-                                Background="#FDF0E0"
+
                                 ToolTip="Pick light color" />
                     </DockPanel>
 
@@ -161,7 +158,6 @@
                                 BorderThickness="1" BorderBrush="#555555"
                                 Click="OnColorPickerClick" DockPanel.Dock="Right"
                                 HorizontalAlignment="Right" Margin="4,0,0,0"
-                                Background="#262630"
                                 ToolTip="Pick ambient color" />
                     </DockPanel>
 

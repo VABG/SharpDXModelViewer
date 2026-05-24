@@ -1,10 +1,12 @@
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using ModelViewer.Rendering;
 using SharpDX;
 using WpfColor = System.Windows.Media.Color;
 
@@ -51,9 +53,83 @@ internal partial class LightControlPanel : UserControl
         }
     }
 
+        // ── ShadowSettings binding ───────────────────────────────────────────
+    /// <summary>
+    /// The single source of truth for shadow/lighting parameters.
+    /// When set, all UI controls are synced to reflect the current values.
+    /// </summary>
+    public ShadowSettings? Settings
+    {
+        get => _settings;
+        set
+        {
+            if (_settings == value) return;
+
+            // Unsubscribe from old instance
+            if (_settings != null)
+                _settings.PropertyChanged -= Settings_PropertyChanged;
+
+            _settings = value;
+
+            if (_settings != null)
+            {
+                _settings.PropertyChanged += Settings_PropertyChanged;
+                SyncUiFromSettings();
+            }
+        }
+    }
+
+    private ShadowSettings? _settings;
+
+    /// <summary>
+    /// Syncs all UI controls to reflect the current ShadowSettings values.
+    /// Called on initial assignment and whenever PropertyChanged fires.
+    /// </summary>
+    private void SyncUiFromSettings()
+    {
+        if (_settings == null) return;
+
+        // Shadow parameters
+        if (PcfRadiusText != null)
+            PcfRadiusText.Text = _settings.PcfRadius.ToString("F3", CultureInfo.InvariantCulture);
+        if (ShadowBiasText != null)
+            ShadowBiasText.Text = _settings.ShadowBias.ToString("F4", CultureInfo.InvariantCulture);
+        if (ShadowNormalBiasText != null)
+            ShadowNormalBiasText.Text = _settings.ShadowNormalBias.ToString("F4", CultureInfo.InvariantCulture);
+
+        // Light color
+        if (LightColorBtn != null)
+        {
+            _lightR = _settings.LightColor.X;
+            _lightG = _settings.LightColor.Y;
+            _lightB = _settings.LightColor.Z;
+            LightColorBtn.Background = new SolidColorBrush(
+                WpfColor.FromRgb((byte)(_lightR * 255), (byte)(_lightG * 255), (byte)(_lightB * 255)));
+        }
+
+        // Ambient color
+        if (AmbientColorBtn != null)
+        {
+            _ambientR = _settings.AmbientColor.X;
+            _ambientG = _settings.AmbientColor.Y;
+            _ambientB = _settings.AmbientColor.Z;
+            AmbientColorBtn.Background = new SolidColorBrush(
+                WpfColor.FromRgb((byte)(_ambientR * 255), (byte)(_ambientG * 255), (byte)(_ambientB * 255)));
+        }
+    }
+
+    /// <summary>
+    /// PropertyChanged handler — syncs UI when settings change externally (e.g., Reset()).
+    /// </summary>
+    private void Settings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // Dispatcher.Invoke is safe here because PropertyChanged may fire from any thread
+        Dispatcher.Invoke(() => SyncUiFromSettings());
+    }
+
     // ── Cached color state (read back when picker opens) ──
-    private float _lightR = 1.0f, _lightG = 0.95f, _lightB = 0.9f;
-    private float _ambientR = 0.15f, _ambientG = 0.15f, _ambientB = 0.18f;
+    private float _lightR, _lightG, _lightB;
+    private float _ambientR, _ambientG, _ambientB;
 
     public LightControlPanel()
     {

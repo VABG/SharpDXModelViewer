@@ -46,13 +46,8 @@ public class Renderer : IDisposable
     private Task? _updateLoopTask;
     private int _frameCount;
 
-    // ── Lighting parameters (mutable, updated from UI thread) ──
-    private float _pcfRadius = 1.0f;
-    private float _shadowBias = 0.002f;
-    private float _shadowNormalBias = 0.05f;
-    private Vector4 _lightColor = new(1.0f, 0.95f, 0.9f, 1.0f);
-    private Vector4 _ambientColor = new(0.15f, 0.15f, 0.18f, 1.0f);
-    private readonly object _lightLock = new();
+        // ── Centralized shadow + lighting settings (single source of truth) ──
+    private readonly ShadowSettings _shadowSettings = new();
 
     /// <summary>
     /// Updates the light direction for shadow mapping and diffuse lighting.
@@ -67,18 +62,19 @@ public class Renderer : IDisposable
         _shadowMap.UpdateLightCamera(direction, sceneRadius: 150f, sceneHeight: 100f);
     }
 
+        /// <summary>
+    /// Gets the centralized shadow settings instance.
+    /// Exposed so WPF controls can data-bind to it directly.
+    /// </summary>
+    public ShadowSettings ShadowSettings => _shadowSettings;
+
     /// <summary>
     /// Updates shadow quality parameters (PcfRadius, ShadowBias, ShadowNormalBias).
     /// Call from the UI thread; the change takes effect on the next frame.
     /// </summary>
     public void SetShadowParams(float pcfRadius, float shadowBias, float shadowNormalBias)
     {
-        lock (_lightLock)
-        {
-            _pcfRadius = pcfRadius;
-            _shadowBias = shadowBias;
-            _shadowNormalBias = shadowNormalBias;
-        }
+        _shadowSettings.SetShadowParams(pcfRadius, shadowBias, shadowNormalBias);
     }
 
     /// <summary>
@@ -87,11 +83,8 @@ public class Renderer : IDisposable
     /// </summary>
     public void SetLightColors(Vector4 lightColor, Vector4 ambientColor)
     {
-        lock (_lightLock)
-        {
-            _lightColor = lightColor;
-            _ambientColor = ambientColor;
-        }
+        _shadowSettings.LightColor = lightColor;
+        _shadowSettings.AmbientColor = ambientColor;
     }
 
     private readonly Stopwatch _fpsWatch = new();
@@ -442,15 +435,13 @@ public class Renderer : IDisposable
                     var cb = new ShadowConstantBuffer(_shadowMap.LightViewProjectionMatrix, _shadowMap.LightDirection);
                     cb.LightViewProjection.Transpose();
 
-                    // Apply current UI-controlled lighting parameters
-                    lock (_lightLock)
-                    {
-                        cb.PcfRadius = _pcfRadius;
-                        cb.ShadowBias = _shadowBias;
-                        cb.ShadowNormalBias = _shadowNormalBias;
-                        cb.LightColor = _lightColor;
-                        cb.AmbientColor = _ambientColor;
-                    }
+                                        // Apply current UI-controlled lighting parameters from a thread-safe snapshot
+                    ShadowSettingsSnapshot settings = _shadowSettings.CaptureSnapshot();
+                    cb.PcfRadius = settings.PcfRadius;
+                    cb.ShadowBias = settings.ShadowBias;
+                    cb.ShadowNormalBias = settings.ShadowNormalBias;
+                    cb.LightColor = settings.LightColor;
+                    cb.AmbientColor = settings.AmbientColor;
 
                     context.MapSubresource(_shadowConstantBuffer, MapMode.WriteDiscard,
                         MapFlags.None, out var shadowData);
