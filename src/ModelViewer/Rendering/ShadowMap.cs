@@ -52,7 +52,7 @@ public class ShadowMap : IDisposable
     /// <param name="sceneRadius">Half-extent of the orthographic frustum in X/Z (default: 100).</param>
     /// <param name="sceneHeight">Half-height of the orthographic frustum in Y (default: 50).</param>
     public ShadowMap(Device device, int shadowSize = 2048,
-        Vector3? lightDirection = null, float sceneRadius = 100f, float sceneHeight = 50f)
+        Vector3? lightDirection = null, float sceneRadius = 150f, float sceneHeight = 100f)
     {
         _device = device;
         Size = shadowSize;
