@@ -2,11 +2,11 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ======================== Colors ======================== -->
-    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#2D2D30"/>
-    <SolidColorBrush x:Key="MenuBorderBrush" Color="#3E3E42"/>
-    <SolidColorBrush x:Key="MenuForegroundBrush" Color="White"/>
-    <SolidColorBrush x:Key="MenuHighlightBrush" Color="#007ACC"/>
-    <SolidColorBrush x:Key="MenuSeparatorBrush" Color="#3E3E42"/>
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#2D2D30" />
+    <SolidColorBrush x:Key="MenuBorderBrush" Color="#3E3E42" />
+    <SolidColorBrush x:Key="MenuForegroundBrush" Color="White" />
+    <SolidColorBrush x:Key="MenuHighlightBrush" Color="#007ACC" />
+    <SolidColorBrush x:Key="MenuSeparatorBrush" Color="#3E3E42" />
 
     <!-- ======================== ContextMenu Template ======================== -->
     <!-- Replaces the entire built-in template so borders are fully under our control -->
@@ -15,7 +15,7 @@
                 BorderBrush="{StaticResource MenuBorderBrush}"
                 BorderThickness="1"
                 Padding="2">
-            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
         </Border>
     </ControlTemplate>
 
@@ -27,7 +27,7 @@
                     Padding="6,2">
                 <ContentPresenter ContentSource="Header"
                                   RecognizesAccessKey="True"
-                                  Margin="0,1"/>
+                                  Margin="0,1" />
             </Border>
             <!-- Popup hosts the dropdown submenu items (non-visual, doesn't affect layout) -->
             <Popup x:Name="SubMenuPopup"
@@ -42,17 +42,17 @@
                         BorderThickness="1"
                         Padding="2">
                     <StackPanel IsItemsHost="True"
-                                KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                KeyboardNavigation.DirectionalNavigation="Cycle" />
                 </Border>
             </Popup>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}" />
             </Trigger>
             <Trigger Property="IsSubmenuOpen" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
-                <Setter TargetName="SubMenuPopup" Property="IsOpen" Value="True"/>
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}" />
+                <Setter TargetName="SubMenuPopup" Property="IsOpen" Value="True" />
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
@@ -66,12 +66,12 @@
                 <StackPanel Orientation="Horizontal">
                     <ContentPresenter ContentSource="Header"
                                       RecognizesAccessKey="True"
-                                      Margin="0,1"/>
+                                      Margin="0,1" />
                     <Path x:Name="Arrow"
                           Data="M 0 0 L 4 4 L 0 8 Z"
                           Fill="{StaticResource MenuForegroundBrush}"
                           Margin="16,0,0,0"
-                          VerticalAlignment="Center"/>
+                          VerticalAlignment="Center" />
                 </StackPanel>
             </Border>
             <!-- Popup hosts the nested submenu items (non-visual, doesn't affect layout) -->
@@ -87,17 +87,17 @@
                         BorderThickness="1"
                         Padding="2">
                     <StackPanel IsItemsHost="True"
-                                KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                KeyboardNavigation.DirectionalNavigation="Cycle" />
                 </Border>
             </Popup>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}" />
             </Trigger>
             <Trigger Property="IsSubmenuOpen" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
-                <Setter TargetName="SubMenuPopup" Property="IsOpen" Value="True"/>
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}" />
+                <Setter TargetName="SubMenuPopup" Property="IsOpen" Value="True" />
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
@@ -110,78 +110,78 @@
             <StackPanel Orientation="Horizontal">
                 <ContentPresenter ContentSource="Header"
                                   RecognizesAccessKey="True"
-                                  Margin="0,1"/>
+                                  Margin="0,1" />
             </StackPanel>
         </Border>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}"/>
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource MenuHighlightBrush}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="#005A9E"/>
+                <Setter TargetName="Border" Property="Background" Value="#005A9E" />
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
 
     <!-- ======================== MenuItem Style (selects template by role) ======================== -->
     <Style TargetType="MenuItem">
-        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}"/>
-        <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}"/>
+        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}" />
+        <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}" />
 
         <Style.Triggers>
             <!-- Has a dropdown submenu -->
             <Trigger Property="Role" Value="TopLevelHeader">
-                <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}"/>
+                <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}" />
             </Trigger>
             <Trigger Property="Role" Value="SubmenuHeader">
-                <Setter Property="Template" Value="{StaticResource SubmenuHeaderTemplate}"/>
+                <Setter Property="Template" Value="{StaticResource SubmenuHeaderTemplate}" />
             </Trigger>
             <!-- Clickable item -->
             <Trigger Property="Role" Value="TopLevelItem">
-                <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}"/>
+                <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}" />
             </Trigger>
             <Trigger Property="Role" Value="SubmenuItem">
-                <Setter Property="Template" Value="{StaticResource SubmenuItemTemplate}"/>
+                <Setter Property="Template" Value="{StaticResource SubmenuItemTemplate}" />
             </Trigger>
         </Style.Triggers>
     </Style>
 
     <!-- ======================== Separator Style ======================== -->
     <Style x:Key="MenuItemSeparatorStyle" TargetType="Separator">
-        <Setter Property="Margin" Value="4,2"/>
-        <Setter Property="Background" Value="{StaticResource MenuSeparatorBrush}"/>
-        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="4,2" />
+        <Setter Property="Background" Value="{StaticResource MenuSeparatorBrush}" />
+        <Setter Property="Height" Value="1" />
     </Style>
 
     <!-- ======================== ContextMenu Style ======================== -->
     <Style TargetType="ContextMenu">
-        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}"/>
-        <Setter Property="Template" Value="{StaticResource ContextMenuTemplate}"/>
+        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}" />
+        <Setter Property="Template" Value="{StaticResource ContextMenuTemplate}" />
     </Style>
 
     <!-- ======================== Menu (menu bar) Style ======================== -->
     <Style TargetType="Menu">
-        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}"/>
+        <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource MenuForegroundBrush}" />
     </Style>
 
-        <!-- ======================== Slider Style ======================== -->
+    <!-- ======================== Slider Style ======================== -->
     <Style TargetType="Slider">
-        <Setter Property="Foreground" Value="#007ACC"/>
-        <Setter Property="Background" Value="#3F3F46"/>
+        <Setter Property="Foreground" Value="#007ACC" />
+        <Setter Property="Background" Value="#3F3F46" />
     </Style>
 
-        <!-- ======================== Collapse Toggle Button ======================== -->
+    <!-- ======================== Collapse Toggle Button ======================== -->
     <Style x:Key="CollapseToggleButtonStyle" TargetType="Button">
-        <Setter Property="Width" Value="18"/>
-        <Setter Property="Height" Value="18"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="#AAAAAA"/>
-        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Width" Value="18" />
+        <Setter Property="Height" Value="18" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="#AAAAAA" />
+        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -195,11 +195,11 @@
                               StrokeEndLineCap="Round"
                               StrokeStartLineCap="Round"
                               HorizontalAlignment="Center"
-                              VerticalAlignment="Center"/>
+                              VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Foreground" Value="White" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -209,11 +209,11 @@
 
     <!-- ======================== Button Style ======================== -->
     <Style TargetType="Button">
-        <Setter Property="Background" Value="#3F3F46"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="BorderBrush" Value="#555555"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Background" Value="#3F3F46" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="BorderBrush" Value="#555555" />
+        <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -223,14 +223,14 @@
                             CornerRadius="3"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"/>
+                                          VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#007ACC"/>
+                            <Setter Property="Background" Value="#007ACC" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="#005A9E"/>
+                            <Setter Property="Background" Value="#005A9E" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -48,7 +48,7 @@ public class Grid : DrawableObject
         DivisionsCount = divisionsCount;
     }
 
-        private void CreateBuffers(Device device)
+    private void CreateBuffers(Device device)
     {
         var (vertices, indices) = GenerateGridMesh();
 

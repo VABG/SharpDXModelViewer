@@ -22,9 +22,6 @@ public class SceneModel : IDrawableObject, IDisposable
     /// <summary>Original file path the model was loaded from.</summary>
     public string FilePath { get; }
 
-    /// <summary>The underlying D3D model resource.</summary>
-    public Model Model => _model;
-
     /// <summary>AABB bounding box of the model in its original (model-space) coordinates.</summary>
     public BoundingBox BoundingBox => _model.BoundingBox;
 

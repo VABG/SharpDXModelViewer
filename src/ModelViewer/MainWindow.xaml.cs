@@ -36,19 +36,16 @@ public partial class MainWindow : Window
             _renderer = new Renderer(surface);
 
             // ── Wire up status bar ──────────────────────────────────────
-            _renderer.OnFpsChanged = fps =>
-            {
-                Dispatcher.Invoke(() => StatusBar.FpsText = $"FPS: {fps}");
-            };
+            _renderer.OnFpsChanged = fps => { Dispatcher.Invoke(() => StatusBar.FpsText = $"FPS: {fps}"); };
 
-                                    // ── Wire up scene-model panel ───────────────────────────────
-                                    ScenePanel.BindModels(_renderer.ModelList.ModelsCollection);
-                                    ScenePanel.ModelFileRequested += OnModelFileRequested;
-                                    ScenePanel.ModelRemovalRequested += OnModelRemovalRequested;
-                                    ScenePanel.ClearSceneRequested += OnClearSceneRequested;
-                                    ScenePanel.SelectionChanged += OnSceneModelSelectionChanged;
+            // ── Wire up scene-model panel ───────────────────────────────
+            ScenePanel.BindModels(_renderer.ModelList.ModelsCollection);
+            ScenePanel.ModelFileRequested += OnModelFileRequested;
+            ScenePanel.ModelRemovalRequested += OnModelRemovalRequested;
+            ScenePanel.ClearSceneRequested += OnClearSceneRequested;
+            ScenePanel.SelectionChanged += OnSceneModelSelectionChanged;
 
-                                                // ── Wire up light-control panel ─────────────────────────────
+            // ── Wire up light-control panel ─────────────────────────────
             LightPanel.Settings = _renderer.ShadowSettings;
             LightPanel.LightDirectionChanged += _renderer.SetLightDirection;
             LightPanel.ShadowParamsChanged += _renderer.SetShadowParams;
@@ -99,7 +96,7 @@ public partial class MainWindow : Window
         StatusBar.StatusText = $"Removed: {sceneModel.DisplayName}";
     }
 
-        private void OnClearSceneRequested()
+    private void OnClearSceneRequested()
     {
         _renderer?.ModelList.Clear();
         StatusBar.StatusText = "Scene cleared";
@@ -118,7 +115,7 @@ public partial class MainWindow : Window
             : $"Selected: {selected.DisplayName}";
     }
 
-        // ────────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────
     //  Menu handlers
     // ────────────────────────────────────────────────────────────────────
 
@@ -138,4 +135,3 @@ public partial class MainWindow : Window
         Close();
     }
 }
-

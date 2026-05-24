@@ -11,7 +11,7 @@ namespace ModelViewer.Rendering;
 /// </summary>
 public abstract class DrawableObject : IDrawableObject
 {
-    private readonly object _transformLock = new();
+    private readonly Lock _transformLock = new();
     private ModelTransform _transform = ModelTransform.Identity;
 
     /// <summary>

@@ -46,6 +46,7 @@ public class ShadowMap : IDisposable
     /// <summary>
     /// Creates a shadow map of the given resolution.
     /// </summary>
+    /// <param name="device"></param>
     /// <param name="shadowSize">Power-of-2 texture size (default 2048).</param>
     /// <param name="lightDirection">Direction the light shines FROM (default: top-down at angle).</param>
     /// <param name="sceneRadius">Half-extent of the orthographic frustum in X/Z (default: 100).</param>
@@ -110,9 +111,9 @@ public class ShadowMap : IDisposable
         {
             Width = Size,
             Height = Size,
-            MipLevels = 1,          // No mipmaps needed for shadow maps
+            MipLevels = 1, // No mipmaps needed for shadow maps
             ArraySize = 1,
-            Format = Format.R32_Typeless,  // Allows both DSV and SRV bindings
+            Format = Format.R32_Typeless, // Allows both DSV and SRV bindings
             SampleDescription = new SampleDescription(1, 0),
             Usage = ResourceUsage.Default,
             BindFlags = BindFlags.DepthStencil | BindFlags.ShaderResource,

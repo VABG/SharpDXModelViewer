@@ -1,12 +1,10 @@
-using System.Windows.Controls;
-
 namespace ModelViewer.Controls;
 
 /// <summary>
 /// Thin status-bar wrapper exposing <see cref="StatusText"/> and <see cref="FpsText"/>
 /// as settable properties so the parent window can update them without name lookup.
 /// </summary>
-internal partial class StatusBar : UserControl
+internal partial class StatusBar
 {
     public StatusBar()
     {

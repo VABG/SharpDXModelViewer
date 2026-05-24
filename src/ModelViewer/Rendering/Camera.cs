@@ -26,6 +26,7 @@ public class Camera
     /// Gets the current projection matrix.
     /// </summary>
     public Matrix ProjectionMatrix { get; private set; }
+
     public float RotationSensitivity { get; set; } = 0.005f;
 
     /// <summary>
@@ -67,7 +68,7 @@ public class Camera
     /// <summary>
     /// Updates the projection matrix based on viewport dimensions.
     /// </summary>
-    public void UpdateProjection(int width, int height, float fov = MathF.PI / 3, 
+    public void UpdateProjection(int width, int height, float fov = MathF.PI / 3,
         float nearPlane = 0.1f, float farPlane = 1000.0f)
     {
         float aspectRatio = width / (float)height;
@@ -99,7 +100,7 @@ public class Camera
 
         UpdateViewMatrix();
     }
-    
+
     /// <summary>
     /// Resets the camera to its default position.
     /// </summary>
@@ -151,4 +152,3 @@ public class Camera
         );
     }
 }
-

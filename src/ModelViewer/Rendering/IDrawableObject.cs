@@ -1,4 +1,3 @@
-using SharpDX.Direct3D11;
 using Buffer = SharpDX.Direct3D11.Buffer;
 
 namespace ModelViewer.Rendering;

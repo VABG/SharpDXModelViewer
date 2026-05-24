@@ -33,7 +33,7 @@ public class D3DRenderSurface : HwndHost
     private int _pendingWidth = 0;
     private int _pendingHeight = 0;
     private bool _pendingResize = false;
-    
+
     // Store the original window procedure so we can chain to it
     private IntPtr _originalWndProc;
     private Format _rendertargetFormat = Format.R8G8B8A8_UNorm;
@@ -50,7 +50,7 @@ public class D3DRenderSurface : HwndHost
     /// mouse message.  Read by InputHandler instead of calling e.GetPosition() which
     /// returns stale values for manually-raised HwndHost events.
     /// </summary>
-    public Point LastMousePosition { get; private set; } = new Point(0,0);
+    public Point LastMousePosition { get; private set; } = new Point(0, 0);
 
     /// <summary>
     /// Extracts the mouse position (X, Y) from the lParam of a Win32 mouse message.
@@ -59,8 +59,8 @@ public class D3DRenderSurface : HwndHost
     private static Point ExtractMousePosition(IntPtr lParam)
     {
         long raw = lParam.ToInt64();
-        int x = (int)(raw & 0xFFFF);           // low-order word
-        int y = (int)((raw >> 16) & 0xFFFF);   // high-order word
+        int x = (int)(raw & 0xFFFF); // low-order word
+        int y = (int)((raw >> 16) & 0xFFFF); // high-order word
         return new Point(x, y);
     }
 
@@ -152,13 +152,14 @@ public class D3DRenderSurface : HwndHost
     private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, WndProcDelegate newProc);
 
     [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, int uMsg, IntPtr wParam, IntPtr lParam);
+    private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, int uMsg, IntPtr wParam,
+        IntPtr lParam);
 
     [DllImport("kernel32.dll")]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
     #endregion
-    
+
     public D3DRenderSurface()
     {
     }
@@ -299,7 +300,7 @@ public class D3DRenderSurface : HwndHost
 
         if (uMsg is 132 or 70)
             return DefWindowProc(hWnd, uMsg, wParam, lParam);
-        
+
         if (surface != null)
         {
             switch (uMsg)
@@ -342,7 +343,7 @@ public class D3DRenderSurface : HwndHost
                 {
                     surface.LastMousePosition = ExtractMousePosition(lParam);
                     surface.RaiseWpfMouseMove();
-                    break; 
+                    break;
                 }
 
                 // --- Mouse wheel ---
@@ -377,7 +378,7 @@ public class D3DRenderSurface : HwndHost
             Environment.TickCount,
             button)
         {
-            RoutedEvent = UIElement.MouseDownEvent,
+            RoutedEvent = MouseDownEvent,
             Source = this,
         };
         RaiseEvent(args);
@@ -393,7 +394,7 @@ public class D3DRenderSurface : HwndHost
             Environment.TickCount,
             button)
         {
-            RoutedEvent = UIElement.MouseUpEvent,
+            RoutedEvent = MouseUpEvent,
             Source = this,
         };
         RaiseEvent(args);

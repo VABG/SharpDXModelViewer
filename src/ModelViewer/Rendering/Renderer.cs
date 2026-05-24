@@ -40,13 +40,13 @@ public class Renderer : IDisposable
     private readonly ModelList _modelList = new();
     private readonly Grid? _grid;
 
-        // Render loop state
+    // Render loop state
     private readonly CancellationTokenSource _cts = new();
     private Task? _renderLoopTask;
     private Task? _updateLoopTask;
     private int _frameCount;
 
-        // ── Centralized shadow + lighting settings (single source of truth) ──
+    // ── Centralized shadow + lighting settings (single source of truth) ──
     private readonly ShadowSettings _shadowSettings = new();
 
     /// <summary>
@@ -62,7 +62,7 @@ public class Renderer : IDisposable
         _shadowMap.UpdateLightCamera(direction, sceneRadius: 150f, sceneHeight: 100f);
     }
 
-        /// <summary>
+    /// <summary>
     /// Gets the centralized shadow settings instance.
     /// Exposed so WPF controls can data-bind to it directly.
     /// </summary>
@@ -431,11 +431,11 @@ public class Renderer : IDisposable
                     // Set viewport to shadow map size
                     context.Rasterizer.SetViewport(0, 0, _shadowMap.Size, _shadowMap.Size);
 
-                                        // Update shadow constant buffer with LightViewProjection matrix + LightDirection
+                    // Update shadow constant buffer with LightViewProjection matrix + LightDirection
                     var cb = new ShadowConstantBuffer(_shadowMap.LightViewProjectionMatrix, _shadowMap.LightDirection);
                     cb.LightViewProjection.Transpose();
 
-                                        // Apply current UI-controlled lighting parameters from a thread-safe snapshot
+                    // Apply current UI-controlled lighting parameters from a thread-safe snapshot
                     ShadowSettingsSnapshot settings = _shadowSettings.CaptureSnapshot();
                     cb.PcfRadius = settings.PcfRadius;
                     cb.ShadowBias = settings.ShadowBias;
@@ -453,7 +453,7 @@ public class Renderer : IDisposable
                     context.VertexShader.Set(_shadowVertexShader);
                     context.PixelShader.Set(_shadowPixelShader);
                     context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
-                    
+
                     // ── Draw all scene models into shadow map ──
                     foreach (var sm in snapshot)
                         DrawObject(context, sm);
@@ -512,7 +512,7 @@ public class Renderer : IDisposable
                 // ── Draw grid (always visible) ─────────────────────────────────
                 DrawObject(context, _grid!);
 
-                                // ── Draw all scene models ────────────────────────────────────
+                // ── Draw all scene models ────────────────────────────────────
                 foreach (var sm in snapshot)
                     DrawObject(context, sm);
 
@@ -601,6 +601,6 @@ public class Renderer : IDisposable
         _inputSignature?.Dispose();
         _viewProjectionBuffer?.Dispose();
         _deviceManager.Dispose();
-        _surface?.Dispose();
+        _surface.Dispose();
     }
 }

@@ -17,7 +17,7 @@ internal partial class ModelTransformPanel : UserControl
 {
     private SceneModel? _selectedModel;
 
-            // ── TextBox formatting ────────────────────────────────────────
+    // ── TextBox formatting ────────────────────────────────────────
     private const string NumberFormat = "F3";
 
     // ── Prevent re-entrant commits during drag ────────────────────
@@ -107,7 +107,7 @@ internal partial class ModelTransformPanel : UserControl
         ScaleText.Text = t.Scale.ToString(NumberFormat, CultureInfo.InvariantCulture);
     }
 
-            // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════
     //  Sync model ← UI  (commit current text values back to the model)
     // ══════════════════════════════════════════════════════════════
 
@@ -185,7 +185,7 @@ internal partial class ModelTransformPanel : UserControl
         if (e.Key == System.Windows.Input.Key.Enter) CommitTransform();
     }
 
-        // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════
     //  Place on Ground — positions the model so its lowest point sits at Z = 0
     // ══════════════════════════════════════════════════════════════
 
@@ -195,7 +195,7 @@ internal partial class ModelTransformPanel : UserControl
 
         var t = _selectedModel.Transform;
 
-                // The bounding box is in model-space (before any transform).
+        // The bounding box is in model-space (before any transform).
         // SharpDX BoundingBox stores Center + Extents, so the lowest point is:
         //   bottomZ = BoundingBox.Center.Z - BoundingBox.Extents.Z
         // After applying the current scale, the offset from the model's origin

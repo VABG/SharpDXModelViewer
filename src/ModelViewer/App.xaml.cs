@@ -1,4 +1,3 @@
-using System;
 using System.Windows;
 
 namespace ModelViewer;
@@ -6,7 +5,7 @@ namespace ModelViewer;
 /// <summary>
 /// Application entry point for the 3D Model Viewer.
 /// </summary>
-public partial class App : System.Windows.Application
+public partial class App
 {
     /// <summary>
     /// Global exception handler to catch unhandled exceptions.

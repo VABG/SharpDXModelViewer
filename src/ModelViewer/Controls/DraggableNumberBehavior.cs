@@ -1,9 +1,7 @@
-using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace ModelViewer.Controls;
 
@@ -130,7 +128,7 @@ public static class DraggableNumberBehavior
         var state = new DragState
         {
             IsDragging = true,
-            StartMouseX = Mouse.GetPosition(null).X,  // screen coords (works across windows)
+            StartMouseX = Mouse.GetPosition(null).X, // screen coords (works across windows)
             StartValue = ReadCurrentValue(textBox),
         };
 
@@ -191,7 +189,7 @@ public static class DraggableNumberBehavior
             textBox.Tag = null;
 
             // Final commit — let the parent know the value is settled
-            textBox.RaiseEvent(new RoutedEventArgs(TextBox.LostFocusEvent, textBox));
+            textBox.RaiseEvent(new RoutedEventArgs(UIElement.LostFocusEvent, textBox));
         }
     }
 
@@ -231,7 +229,7 @@ public class DragValueChangedEventArgs : RoutedEventArgs
 {
     public double NewValue { get; }
     public TextBox SourceTextBox { get; }
-    public bool Accepted { get; set; } = true;
+    public bool Accepted { get; set; }
 
     public DragValueChangedEventArgs(RoutedEvent routedEvent, double newValue, TextBox sourceTextBox)
         : base(routedEvent)

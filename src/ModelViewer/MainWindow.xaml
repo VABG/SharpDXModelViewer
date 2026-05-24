@@ -37,21 +37,21 @@
                 <ColumnDefinition Width="5" />                      <!-- Left splitter -->
                 <ColumnDefinition Width="*" MinWidth="300" />      <!-- 3D viewport -->
             </Grid.ColumnDefinitions>
-        <!-- Scene models panel (left side) -->
+            <!-- Scene models panel (left side) -->
             <DockPanel Grid.Column="0" Margin="4">
-            <controls:SceneModelPanel x:Name="ScenePanel"
-                                      DockPanel.Dock="Top"
-                                      Margin="0"
-                                      Height="Auto" />
-            <controls:ModelTransformPanel x:Name="TransformPanel"
+                <controls:SceneModelPanel x:Name="ScenePanel"
                                           DockPanel.Dock="Top"
-                                          Margin="0,4,0,0"
+                                          Margin="0"
                                           Height="Auto" />
-            <controls:LightControlPanel x:Name="LightPanel"
-                                        DockPanel.Dock="Top"
-                                        Margin="0,4,0,0"
-                                        Height="Auto" />
-        </DockPanel>
+                <controls:ModelTransformPanel x:Name="TransformPanel"
+                                              DockPanel.Dock="Top"
+                                              Margin="0,4,0,0"
+                                              Height="Auto" />
+                <controls:LightControlPanel x:Name="LightPanel"
+                                            DockPanel.Dock="Top"
+                                            Margin="0,4,0,0"
+                                            Height="Auto" />
+            </DockPanel>
 
             <!-- Left GridSplitter -->
             <GridSplitter Grid.Column="1"

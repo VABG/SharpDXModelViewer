@@ -148,6 +148,7 @@ public class ShadowSettings : INotifyPropertyChanged
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
         return true;
     }
 }

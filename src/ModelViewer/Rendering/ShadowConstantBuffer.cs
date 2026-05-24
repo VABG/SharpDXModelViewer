@@ -17,17 +17,17 @@ namespace ModelViewer.Rendering;
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct ShadowConstantBuffer
 {
-    public Matrix LightViewProjection;   // 64 bytes
-    public Vector3 LightDirection;       // 12 bytes
-    public float Padding;               // 4 bytes (fills b1[4])
-    public float PcfRadius;             // 4 bytes (b1[5].x)
-    public float ShadowBias;            // 4 bytes (b1[5].y)
-    public float ShadowNormalBias;      // 4 Bytes
-    public float Padding2;               // 4 bytes (fills b1[4])
-    public Vector4 LightColor;          // 16 bytes (b1[6].xyz)
-    public Vector4 AmbientColor;        // 16 bytes (b1[7].xyz)
+    public Matrix LightViewProjection; // 64 bytes
+    public Vector3 LightDirection; // 12 bytes
+    public float Padding; // 4 bytes (fills b1[4])
+    public float PcfRadius; // 4 bytes (b1[5].x)
+    public float ShadowBias; // 4 bytes (b1[5].y)
+    public float ShadowNormalBias; // 4 Bytes
+    public float Padding2; // 4 bytes (fills b1[4])
+    public Vector4 LightColor; // 16 bytes (b1[6].xyz)
+    public Vector4 AmbientColor; // 16 bytes (b1[7].xyz)
 
-        public ShadowConstantBuffer(Matrix lightViewProj, Vector3 lightDir,
+    public ShadowConstantBuffer(Matrix lightViewProj, Vector3 lightDir,
         float pcfRadius = ShadowSettings.DefaultPcfRadius, float shadowBias = ShadowSettings.DefaultShadowBias)
     {
         LightViewProjection = lightViewProj;
@@ -40,4 +40,3 @@ public struct ShadowConstantBuffer
         AmbientColor = ShadowSettings.DefaultAmbientColor;
     }
 }
-

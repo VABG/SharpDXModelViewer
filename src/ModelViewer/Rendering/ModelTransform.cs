@@ -10,7 +10,7 @@ public struct ModelTransform
 {
     /// <summary>Default identity transform.</summary>
     public static readonly ModelTransform Identity = new(
-        Vector3.Zero, Vector3.Zero, 1.0f);
+        Vector3.Zero, Vector3.Zero);
 
     /// <summary>Translation component (world-space position).</summary>
     public Vector3 Position;

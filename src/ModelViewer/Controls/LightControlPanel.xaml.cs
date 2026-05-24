@@ -1,9 +1,7 @@
-using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using ModelViewer.Rendering;
@@ -16,7 +14,7 @@ namespace ModelViewer.Controls;
 /// Encapsulates light-direction sliders, shadow parameters, and color pickers.
 /// Raises events whenever any lighting parameter changes.
 /// </summary>
-internal partial class LightControlPanel : UserControl
+internal partial class LightControlPanel
 {
     /// <summary>
     /// Fired whenever yaw or pitch changes, carrying the resulting 3D direction.
@@ -53,7 +51,7 @@ internal partial class LightControlPanel : UserControl
         }
     }
 
-        // ── ShadowSettings binding ───────────────────────────────────────────
+    // ── ShadowSettings binding ───────────────────────────────────────────
     /// <summary>
     /// The single source of truth for shadow/lighting parameters.
     /// When set, all UI controls are synced to reflect the current values.
@@ -124,7 +122,7 @@ internal partial class LightControlPanel : UserControl
     private void Settings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         // Dispatcher.Invoke is safe here because PropertyChanged may fire from any thread
-        Dispatcher.Invoke(() => SyncUiFromSettings());
+        Dispatcher.Invoke(SyncUiFromSettings);
     }
 
     // ── Cached color state (read back when picker opens) ──
@@ -167,11 +165,11 @@ internal partial class LightControlPanel : UserControl
         var direction = new Vector3(x, y, z);
         direction.Normalize();
 
-                // Notify parent
+        // Notify parent
         LightDirectionChanged?.Invoke(direction);
     }
 
-        private void OnShadowSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnShadowSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (PcfRadiusText == null || ShadowBiasText == null || ShadowNormalBiasText == null)
             return;
@@ -183,7 +181,7 @@ internal partial class LightControlPanel : UserControl
         ShadowParamsChanged?.Invoke(pcf, bias, normalBias);
     }
 
-        /// <summary>Raised by DraggableNumberBehavior on every drag step — commits live.</summary>
+    /// <summary>Raised by DraggableNumberBehavior on every drag step — commits live.</summary>
     private void OnShadowDragValueChanged(object? sender, RoutedEventArgs e) =>
         OnShadowSlider_ValueChanged(null!, default!);
 
@@ -202,10 +200,11 @@ internal partial class LightControlPanel : UserControl
     private static float ReadShadowValue(TextBox tb)
     {
         return float.TryParse(tb.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)
-            ? v : 0f;
+            ? v
+            : 0f;
     }
 
-        /// <summary>
+    /// <summary>
     /// Opens a color picker dialog for the clicked button (LightColor or AmbientColor).
     /// </summary>
     private void OnColorPickerClick(object? sender, RoutedEventArgs e)
@@ -239,7 +238,9 @@ internal partial class LightControlPanel : UserControl
 
         if (btn == LightColorBtn)
         {
-            _lightR = rf; _lightG = gf; _lightB = bf;
+            _lightR = rf;
+            _lightG = gf;
+            _lightB = bf;
             btn.Background = new SolidColorBrush(chosen);
 
             // Fire with current ambient too
@@ -249,7 +250,9 @@ internal partial class LightControlPanel : UserControl
         }
         else
         {
-            _ambientR = rf; _ambientG = gf; _ambientB = bf;
+            _ambientR = rf;
+            _ambientG = gf;
+            _ambientB = bf;
             btn.Background = new SolidColorBrush(chosen);
 
             // Fire with current light too
@@ -266,7 +269,7 @@ internal partial class LightControlPanel : UserControl
 /// </summary>
 internal static class ColorPickerDialog
 {
-        public static WpfColor? Show(WpfColor initialColor)
+    public static WpfColor? Show(WpfColor initialColor)
     {
         var win = new Window
         {
@@ -299,7 +302,7 @@ internal static class ColorPickerDialog
         string[] labels = { "Red", "Green", "Blue" };
         var sliders = new Slider[3];
 
-                for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++)
         {
             int channel = i; // capture for lambda
             var label = new TextBlock
@@ -351,7 +354,7 @@ internal static class ColorPickerDialog
         var hexText = new TextBlock
         {
             Text = $"#{initialColor.R:X2}{initialColor.G:X2}{initialColor.B:X2}",
-                        Foreground = new SolidColorBrush(WpfColor.FromRgb(0xCC, 0xCC, 0xCC)),
+            Foreground = new SolidColorBrush(WpfColor.FromRgb(0xCC, 0xCC, 0xCC)),
             FontSize = 11,
             FontFamily = new FontFamily("Consolas"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -359,20 +362,21 @@ internal static class ColorPickerDialog
         };
         root.Children.Add(hexText);
 
-                // Update hex text live
+        // Update hex text live
         for (int i = 0; i < 3; i++)
         {
-            sliders[i].ValueChanged += (_, _) =>
-            {
-                hexText.Text = $"#{values[0]:X2}{values[1]:X2}{values[2]:X2}";
-            };
+            sliders[i].ValueChanged += (_, _) => { hexText.Text = $"#{values[0]:X2}{values[1]:X2}{values[2]:X2}"; };
         }
 
         root.Children.Add(new DockPanel { Margin = new Thickness(0, 16, 0, 0) }); // spacer
 
         // ── Buttons ──
         var btnPanel = new DockPanel();
-        var cancelBtn = new Button { Content = "Cancel", Width = 70, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(6, 0, 0, 0) };
+        var cancelBtn = new Button
+        {
+            Content = "Cancel", Width = 70, HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(6, 0, 0, 0)
+        };
         var okBtn = new Button { Content = "OK", Width = 70, HorizontalAlignment = HorizontalAlignment.Right };
         btnPanel.Children.Add(cancelBtn);
         btnPanel.Children.Add(okBtn);
@@ -380,7 +384,7 @@ internal static class ColorPickerDialog
 
         win.Content = root;
 
-                cancelBtn.Click += (_, _) => { win.DialogResult = false; };
+        cancelBtn.Click += (_, _) => { win.DialogResult = false; };
         okBtn.Click += (_, _) => { win.DialogResult = true; };
 
         bool? shown = win.ShowDialog();

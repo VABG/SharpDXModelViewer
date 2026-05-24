@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Assimp;
 using SharpDX;
@@ -22,14 +20,14 @@ public class Model : DrawableObject
     public override SharpDX.Direct3D11.Buffer? IndexBuffer => _indexBuffer;
 
     /// <summary>AABB bounding box of the model in its original (model-space) coordinates.</summary>
-    public BoundingBox BoundingBox { get; private set; } = default;
+    public BoundingBox BoundingBox { get; private set; }
 
     /// <summary>
     /// Loads a 3D model file and creates D3D11 vertex/index buffers.
     /// Also computes the bounding box and centroid origin from geometry.
     /// Supports OBJ, FBX, GLTF, GLB, DAE, and STL formats.
     /// </summary>
-    public static Model Load(SharpDX.Direct3D11.Device device, string filePath)
+    public static Model Load(Device device, string filePath)
     {
         // AssimpNet 4.1.0 uses AssimpContext
         using var importer = new AssimpContext();
@@ -66,7 +64,8 @@ public class Model : DrawableObject
 
                     var uv = mesh.TextureCoordinateChannelCount > 0
                              && vertexIndex < mesh.TextureCoordinateChannels[0].Count
-                        ? new Vector2D(mesh.TextureCoordinateChannels[0][vertexIndex].X, mesh.TextureCoordinateChannels[0][vertexIndex].Y)
+                        ? new Vector2D(mesh.TextureCoordinateChannels[0][vertexIndex].X,
+                            mesh.TextureCoordinateChannels[0][vertexIndex].Y)
                         : new Vector2D(0, 0);
 
                     var pos = new Vector3(vertex.X, vertex.Y, vertex.Z);
@@ -96,7 +95,7 @@ public class Model : DrawableObject
         return model;
     }
 
-        private void CreateBuffers(Device device, List<VertexPositionNormalTexture> vertices, List<int> indices)
+    private void CreateBuffers(Device device, List<VertexPositionNormalTexture> vertices, List<int> indices)
     {
         _indexCount = indices.Count;
         _vertexBuffer = BufferHelpers.CreateVertexBuffer(device, vertices);
@@ -132,4 +131,3 @@ public struct VertexPositionNormalTexture
         TextureCoordinate = textureCoordinate;
     }
 }
-

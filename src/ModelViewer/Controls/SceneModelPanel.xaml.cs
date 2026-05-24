@@ -1,4 +1,3 @@
-using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,7 +11,7 @@ namespace ModelViewer.Controls;
 /// Encapsulates the scene-model list with add/remove functionality.
 /// Raises events so the parent window can delegate to the renderer.
 /// </summary>
-internal partial class SceneModelPanel : UserControl
+internal partial class SceneModelPanel
 {
     /// <summary>Fired when the user picks a file to add.</summary>
     public event Action<string>? ModelFileRequested;
@@ -44,7 +43,7 @@ internal partial class SceneModelPanel : UserControl
                 var angle = value ? 0d : -90d;
                 CollapseBtn.RenderTransform =
                     new System.Windows.Media.RotateTransform(angle);
-                CollapseBtn.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+                CollapseBtn.RenderTransformOrigin = new Point(0.5, 0.5);
             }
         }
     }
@@ -148,4 +147,3 @@ internal partial class SceneModelPanel : UserControl
         SelectionChanged?.Invoke(ModelListBox.SelectedItem as SceneModel);
     }
 }
-
