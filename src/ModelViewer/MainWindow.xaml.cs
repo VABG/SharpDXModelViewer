@@ -46,7 +46,7 @@ public partial class MainWindow : Window
             ScenePanel.SelectionChanged += OnSceneModelSelectionChanged;
 
             // ── Wire up light-control panel ─────────────────────────────
-            LightPanel.Settings = _renderer.ShadowSettings;
+            LightPanel.Settings = _renderer.DirectionalLightSettings;
             LightPanel.LightDirectionChanged += _renderer.SetLightDirection;
             LightPanel.ShadowParamsChanged += _renderer.SetShadowParams;
             LightPanel.LightColorsChanged += _renderer.SetLightColors;

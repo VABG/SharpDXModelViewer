@@ -1,9 +1,7 @@
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
-using SharpDX.D3DCompiler;
 using SharpDX.DXGI;
 using MapFlags = SharpDX.Direct3D11.MapFlags;
 
@@ -20,11 +18,8 @@ public class Renderer : IDisposable
     private readonly Camera _camera;
     private readonly InputHandler _inputHandler;
 
-    // Shader pipeline resources
-    private VertexShader? _vertexShader;
-    private PixelShader? _pixelShader;
-    private InputLayout? _inputLayout;
-    private ShaderSignature? _inputSignature;
+        // Shader pipeline resources
+    private CompiledShaders? _mainShaders;
     private readonly SharpDX.Direct3D11.Buffer? _viewProjectionBuffer;
 
     // ── Shadow map resources ──
@@ -47,7 +42,7 @@ public class Renderer : IDisposable
     private int _frameCount;
 
     // ── Centralized shadow + lighting settings (single source of truth) ──
-    private readonly ShadowSettings _shadowSettings = new();
+    private readonly DirectionalLightSettings _directionalLightSettings = new();
 
     /// <summary>
     /// Updates the light direction for shadow mapping and diffuse lighting.
@@ -66,7 +61,7 @@ public class Renderer : IDisposable
     /// Gets the centralized shadow settings instance.
     /// Exposed so WPF controls can data-bind to it directly.
     /// </summary>
-    public ShadowSettings ShadowSettings => _shadowSettings;
+    public DirectionalLightSettings DirectionalLightSettings => _directionalLightSettings;
 
     /// <summary>
     /// Updates shadow quality parameters (PcfRadius, ShadowBias, ShadowNormalBias).
@@ -74,7 +69,7 @@ public class Renderer : IDisposable
     /// </summary>
     public void SetShadowParams(float pcfRadius, float shadowBias, float shadowNormalBias)
     {
-        _shadowSettings.SetShadowParams(pcfRadius, shadowBias, shadowNormalBias);
+        _directionalLightSettings.SetShadowParams(pcfRadius, shadowBias, shadowNormalBias);
     }
 
     /// <summary>
@@ -83,8 +78,8 @@ public class Renderer : IDisposable
     /// </summary>
     public void SetLightColors(Vector4 lightColor, Vector4 ambientColor)
     {
-        _shadowSettings.LightColor = lightColor;
-        _shadowSettings.AmbientColor = ambientColor;
+        _directionalLightSettings.LightColor = lightColor;
+        _directionalLightSettings.AmbientColor = ambientColor;
     }
 
     private readonly Stopwatch _fpsWatch = new();
@@ -106,7 +101,10 @@ public class Renderer : IDisposable
         _deviceManager = new DeviceManager(surface);
         _camera = new Camera();
 
-        CompileAndLoadShaders();
+        _mainShaders = ShaderCompiler.CompileAndLoad(
+            _deviceManager.Device,
+            ShaderCompiler.ResolveShaderPath("VertexShader.hlsl"),
+            ShaderCompiler.ResolveShaderPath("PixelShader.hlsl"));
         InitializeShadowMap();
 
         // Create view-projection constant buffer (non-generic for SharpDX 4.2.0)
@@ -151,61 +149,7 @@ public class Renderer : IDisposable
         StartRenderLoop();
     }
 
-    private void CompileAndLoadShaders()
-    {
-        var device = _deviceManager.Device;
-
-        // Load and compile shaders from .hlsl files
-        var vsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shaders", "VertexShader.hlsl");
-        var psFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shaders", "PixelShader.hlsl");
-
-        if (!File.Exists(vsFilePath))
-            throw new FileNotFoundException($"Vertex shader file not found: {vsFilePath}");
-        if (!File.Exists(psFilePath))
-            throw new FileNotFoundException($"Pixel shader file not found: {psFilePath}");
-
-        // ── Compile vertex shader ──
-        ShaderBytecode vsBlob;
-        try
-        {
-            vsBlob = ShaderBytecode.CompileFromFile(vsFilePath, "VSMain", "vs_4_0");
-        }
-        catch (SharpDXException ex)
-        {
-            throw new InvalidOperationException(
-                $"Vertex shader compilation failed ({vsFilePath}):\n\n{ex.Message}", ex);
-        }
-
-        _inputSignature = ShaderSignature.GetInputSignature(vsBlob);
-        _vertexShader = new VertexShader(device, vsBlob);
-
-        // ── Compile pixel shader ──
-        ShaderBytecode psBlob;
-        try
-        {
-            psBlob = ShaderBytecode.CompileFromFile(psFilePath, "PSMain", "ps_4_0");
-        }
-        catch (SharpDXException ex)
-        {
-            throw new InvalidOperationException(
-                $"Pixel shader compilation failed ({psFilePath}):\n\n{ex.Message}", ex);
-        }
-
-        _pixelShader = new PixelShader(device, psBlob);
-
-        var layoutElements = new[]
-        {
-            new InputElement("Position", 0, Format.R32G32B32_Float, 0),
-            new InputElement("Normal", 0, Format.R32G32B32_Float, 0),
-            new InputElement("TexCoord", 0, Format.R32G32_Float, 0),
-        };
-        _inputLayout = new InputLayout(device, _inputSignature, layoutElements);
-
-        vsBlob.Dispose();
-        psBlob.Dispose();
-    }
-
-    /// <summary>
+            /// <summary>
     /// Creates the shadow map texture and compiles the depth-pass shaders.
     /// </summary>
     private void InitializeShadowMap()
@@ -215,37 +159,14 @@ public class Renderer : IDisposable
         // ── Create the shadow map (2048x2048, orthographic skylight) ──
         _shadowMap = new ShadowMap(device, shadowSize: 2048);
 
-        // ── Compile depth-pass vertex shader ──
-        var shadowVsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-            "Shaders", "VertexShaderShadow.hlsl");
+        // ── Compile depth-pass shaders ──
+        var shadowVsPath = ShaderCompiler.ResolveShaderPath("VertexShaderShadow.hlsl");
+        var shadowPsPath = ShaderCompiler.ResolveShaderPath("PixelShaderShadow.hlsl");
 
-        try
-        {
-            var shadowVsBlob = ShaderBytecode.CompileFromFile(shadowVsPath, "VSMain", "vs_4_0");
-            _shadowVertexShader = new VertexShader(device, shadowVsBlob);
-            shadowVsBlob.Dispose();
-        }
-        catch (SharpDXException ex)
-        {
-            throw new InvalidOperationException(
-                $"Shadow vertex shader compilation failed ({shadowVsPath}):\n\n{ex.Message}", ex);
-        }
+        var (shadowVs, _) = ShaderCompiler.CompileVertexShader(device, shadowVsPath);
+        _shadowVertexShader = shadowVs;
 
-        // ── Compile depth-pass pixel shader ──
-        var shadowPsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-            "Shaders", "PixelShaderShadow.hlsl");
-
-        try
-        {
-            var shadowPsBlob = ShaderBytecode.CompileFromFile(shadowPsPath, "PSMain", "ps_4_0");
-            _shadowPixelShader = new PixelShader(device, shadowPsBlob);
-            shadowPsBlob.Dispose();
-        }
-        catch (SharpDXException ex)
-        {
-            throw new InvalidOperationException(
-                $"Shadow pixel shader compilation failed ({shadowPsPath}):\n\n{ex.Message}", ex);
-        }
+        _shadowPixelShader = ShaderCompiler.CompilePixelShader(device, shadowPsPath);
     }
 
     private void StartRenderLoop()
@@ -436,7 +357,7 @@ public class Renderer : IDisposable
                     cb.LightViewProjection.Transpose();
 
                     // Apply current UI-controlled lighting parameters from a thread-safe snapshot
-                    ShadowSettingsSnapshot settings = _shadowSettings.CaptureSnapshot();
+                    ShadowSettingsSnapshot settings = _directionalLightSettings.CaptureSnapshot();
                     cb.PcfRadius = settings.PcfRadius;
                     cb.ShadowBias = settings.ShadowBias;
                     cb.ShadowNormalBias = settings.ShadowNormalBias;
@@ -448,8 +369,8 @@ public class Renderer : IDisposable
                     Marshal.StructureToPtr(cb, shadowData.DataPointer, false);
                     context.UnmapSubresource(_shadowConstantBuffer, 0);
 
-                    // Set depth-pass pipeline state
-                    context.InputAssembler.InputLayout = _inputLayout;
+                                        // Set depth-pass pipeline state
+                    context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
                     context.VertexShader.Set(_shadowVertexShader);
                     context.PixelShader.Set(_shadowPixelShader);
                     context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
@@ -487,10 +408,10 @@ public class Renderer : IDisposable
 
                 context.UnmapSubresource(_viewProjectionBuffer, 0);
 
-                // ── Set pipeline state ─────────────────────────────────────────
-                context.InputAssembler.InputLayout = _inputLayout;
-                context.VertexShader.Set(_vertexShader);
-                context.PixelShader.Set(_pixelShader);
+                                // ── Set pipeline state ─────────────────────────────────────────
+                context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
+                context.VertexShader.Set(_mainShaders.VertexShader);
+                context.PixelShader.Set(_mainShaders.PixelShader);
                 context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
 
                 // ── Bind shadow matrices at cbuffer slot b1 (vertex + pixel shader) ──
@@ -587,7 +508,7 @@ public class Renderer : IDisposable
         _renderLoopTask?.Wait(2000);
         _updateLoopTask?.Wait(2000);
 
-        _inputHandler.Dispose();
+                _inputHandler.Dispose();
         _modelList.Dispose();
         _grid?.Dispose();
         _shadowMap?.Dispose();
@@ -595,10 +516,7 @@ public class Renderer : IDisposable
         _shadowPixelShader?.Dispose();
         _shadowConstantBuffer?.Dispose();
         _worldMatrixBuffer?.Dispose();
-        _inputLayout?.Dispose();
-        _vertexShader?.Dispose();
-        _pixelShader?.Dispose();
-        _inputSignature?.Dispose();
+        _mainShaders?.Dispose();
         _viewProjectionBuffer?.Dispose();
         _deviceManager.Dispose();
         _surface.Dispose();

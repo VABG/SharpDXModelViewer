@@ -56,7 +56,7 @@ internal partial class LightControlPanel
     /// The single source of truth for shadow/lighting parameters.
     /// When set, all UI controls are synced to reflect the current values.
     /// </summary>
-    public ShadowSettings? Settings
+    public DirectionalLightSettings? Settings
     {
         get => _settings;
         set
@@ -77,7 +77,7 @@ internal partial class LightControlPanel
         }
     }
 
-    private ShadowSettings? _settings;
+    private DirectionalLightSettings? _settings;
 
     /// <summary>
     /// Syncs all UI controls to reflect the current ShadowSettings values.

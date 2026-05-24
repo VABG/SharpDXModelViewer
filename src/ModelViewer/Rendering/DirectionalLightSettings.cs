@@ -12,7 +12,7 @@ namespace ModelViewer.Rendering;
 /// The render thread reads a snapshot via <see cref="CaptureSnapshot"/> to avoid
 /// holding locks during drawing.
 /// </summary>
-public class ShadowSettings : INotifyPropertyChanged
+public class DirectionalLightSettings : INotifyPropertyChanged
 {
     // ── Defaults ──────────────────────────────────────────────────────────────
     public const float DefaultPcfRadius = 1.0f;
