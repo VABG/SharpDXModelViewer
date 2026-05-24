@@ -2,9 +2,12 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:ModelViewer.Controls"
+             xmlns:converters="clr-namespace:ModelViewer.Converters"
              x:ClassModifier="internal"
-             Background="#2D2D30"
-             local:DraggableNumberBehavior.DragValueChanged="OnDragValueChanged">
+             Background="#2D2D30">
+    <UserControl.Resources>
+        <converters:BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
     <Border Background="#2D2D30" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4">
         <DockPanel>
 
@@ -13,13 +16,19 @@
                     BorderBrush="#3F3F46" BorderThickness="0,0,0,1"
                     Padding="6,5">
                 <DockPanel>
-                    <!-- Collapse toggle (right side) -->
-                    <Button x:Name="CollapseBtn"
-                            Style="{StaticResource CollapseToggleButtonStyle}"
-                            Click="OnCollapseToggle_Click"
+                                        <!-- Collapse toggle (right side) -->
+                    <Button Style="{StaticResource CollapseToggleButtonStyle}"
+                            Command="{Binding ToggleExpandCommand}"
                             DockPanel.Dock="Right"
                             Width="18" Height="18"
-                            Tag="Expanded" />
+                            Tag="Expanded">
+                                                <Button.RenderTransform>
+                            <RotateTransform Angle="{Binding ChevronAngle, Mode=OneWay}" />
+                        </Button.RenderTransform>
+                        <Button.RenderTransformOrigin>
+                            <Point X="0.5" Y="0.5" />
+                        </Button.RenderTransformOrigin>
+                    </Button>
                     <!-- Title + selected model name -->
                     <StackPanel>
                         <DockPanel>
@@ -27,8 +36,7 @@
                                        FontWeight="SemiBold" FontSize="12"
                                        VerticalAlignment="Center" />
                         </DockPanel>
-                        <TextBlock x:Name="SelectedModelName"
-                                   Text="(no selection)"
+                        <TextBlock Text="{Binding ModelName, Mode=OneWay}"
                                    Foreground="#888888" FontSize="10"
                                    TextTrimming="CharacterEllipsis"
                                    Margin="0,1,0,0" />
@@ -36,8 +44,8 @@
                 </DockPanel>
             </Border>
 
-            <!-- ── Collapsible Body ── -->
-            <Grid x:Name="ContentGrid" Visibility="Visible">
+                        <!-- ── Collapsible Body ── -->
+            <Grid Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}, Mode=OneWay}">
                 <!-- Scrollable content -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
@@ -58,13 +66,13 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                     <TextBlock Text="X:" Foreground="#CCCCCC"
                                                FontSize="11" Width="16" />
-                                    <TextBox x:Name="PosXText" Width="60"
+                                                                        <TextBox Text="{Binding PosX, StringFormat=F3, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"
                                              Foreground="White" Background="#3F3F46"
                                              BorderBrush="#555555" BorderThickness="1"
                                              FontSize="11" Padding="2"
                                              TextAlignment="Right"
-                                             LostFocus="OnPositionText_LostFocus"
-                                             PreviewKeyDown="OnPositionText_KeyDown"
+                                             IsEnabled="{Binding HasModel, Mode=OneWay}"
                                              Tag="X"
                                              local:DraggableNumberBehavior.IsEnabled="True"
                                              local:DraggableNumberBehavior.Sensitivity="0.05" />
@@ -74,13 +82,13 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                     <TextBlock Text="Y:" Foreground="#CCCCCC"
                                                FontSize="11" Width="16" />
-                                    <TextBox x:Name="PosYText" Width="60"
+                                                                        <TextBox Text="{Binding PosY, StringFormat=F3, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"
                                              Foreground="White" Background="#3F3F46"
                                              BorderBrush="#555555" BorderThickness="1"
                                              FontSize="11" Padding="2"
                                              TextAlignment="Right"
-                                             LostFocus="OnPositionText_LostFocus"
-                                             PreviewKeyDown="OnPositionText_KeyDown"
+                                             IsEnabled="{Binding HasModel, Mode=OneWay}"
                                              Tag="Y"
                                              local:DraggableNumberBehavior.IsEnabled="True"
                                              local:DraggableNumberBehavior.Sensitivity="0.05" />
@@ -90,13 +98,13 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                     <TextBlock Text="Z:" Foreground="#CCCCCC"
                                                FontSize="11" Width="16" />
-                                    <TextBox x:Name="PosZText" Width="60"
+                                                                        <TextBox Text="{Binding PosZ, StringFormat=F3, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"
                                              Foreground="White" Background="#3F3F46"
                                              BorderBrush="#555555" BorderThickness="1"
                                              FontSize="11" Padding="2"
                                              TextAlignment="Right"
-                                             LostFocus="OnPositionText_LostFocus"
-                                             PreviewKeyDown="OnPositionText_KeyDown"
+                                             IsEnabled="{Binding HasModel, Mode=OneWay}"
                                              Tag="Z"
                                              local:DraggableNumberBehavior.IsEnabled="True"
                                              local:DraggableNumberBehavior.Sensitivity="0.05" />
@@ -115,13 +123,13 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                     <TextBlock Text="X:" Foreground="#CCCCCC"
                                                FontSize="11" Width="16" />
-                                    <TextBox x:Name="RotXText" Width="60"
+                                                                        <TextBox Text="{Binding RotX, StringFormat=F3, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"
                                              Foreground="White" Background="#3F3F46"
                                              BorderBrush="#555555" BorderThickness="1"
                                              FontSize="11" Padding="2"
                                              TextAlignment="Right"
-                                             LostFocus="OnRotationText_LostFocus"
-                                             PreviewKeyDown="OnRotationText_KeyDown"
+                                             IsEnabled="{Binding HasModel, Mode=OneWay}"
                                              Tag="X"
                                              local:DraggableNumberBehavior.IsEnabled="True"
                                              local:DraggableNumberBehavior.Sensitivity="0.1" />
@@ -131,13 +139,13 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                     <TextBlock Text="Y:" Foreground="#CCCCCC"
                                                FontSize="11" Width="16" />
-                                    <TextBox x:Name="RotYText" Width="60"
+                                                                        <TextBox Text="{Binding RotY, StringFormat=F3, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"
                                              Foreground="White" Background="#3F3F46"
                                              BorderBrush="#555555" BorderThickness="1"
                                              FontSize="11" Padding="2"
                                              TextAlignment="Right"
-                                             LostFocus="OnRotationText_LostFocus"
-                                             PreviewKeyDown="OnRotationText_KeyDown"
+                                             IsEnabled="{Binding HasModel, Mode=OneWay}"
                                              Tag="Y"
                                              local:DraggableNumberBehavior.IsEnabled="True"
                                              local:DraggableNumberBehavior.Sensitivity="0.1" />
@@ -147,13 +155,13 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                     <TextBlock Text="Z:" Foreground="#CCCCCC"
                                                FontSize="11" Width="16" />
-                                    <TextBox x:Name="RotZText" Width="60"
+                                                                        <TextBox Text="{Binding RotZ, StringFormat=F3, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"
                                              Foreground="White" Background="#3F3F46"
                                              BorderBrush="#555555" BorderThickness="1"
                                              FontSize="11" Padding="2"
                                              TextAlignment="Right"
-                                             LostFocus="OnRotationText_LostFocus"
-                                             PreviewKeyDown="OnRotationText_KeyDown"
+                                             IsEnabled="{Binding HasModel, Mode=OneWay}"
                                              Tag="Z"
                                              local:DraggableNumberBehavior.IsEnabled="True"
                                              local:DraggableNumberBehavior.Sensitivity="0.1" />
@@ -170,28 +178,30 @@
                                            Margin="0,4,0,2" />
 
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                    <TextBox x:Name="ScaleText" Width="60"
+                                                                        <TextBox Text="{Binding Scale, StringFormat=F3, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"
                                              Foreground="White" Background="#3F3F46"
                                              BorderBrush="#555555" BorderThickness="1"
                                              FontSize="11" Padding="2"
                                              TextAlignment="Right"
-                                             LostFocus="OnScaleText_LostFocus"
-                                             PreviewKeyDown="OnScaleText_KeyDown"
+                                             IsEnabled="{Binding HasModel, Mode=OneWay}"
                                              local:DraggableNumberBehavior.IsEnabled="True"
                                              local:DraggableNumberBehavior.Sensitivity="0.02"
                                              local:DraggableNumberBehavior.Minimum="0.01" />
                                 </StackPanel>
                             </StackPanel>
                         </WrapPanel>
-                        <WrapPanel>
-                            <!-- Reset button -->
+                                                <WrapPanel>
+                                                        <!-- Reset button -->
                             <Button Content="↺ Reset"
-                                    Click="OnResetTransform_Click"
+                                    Command="{Binding ResetTransformCommand}"
+                                    IsEnabled="{Binding HasModel, Mode=OneWay}"
                                     Margin="5" Padding="6,3"
                                     FontSize="11" Height="24" />
                             <!-- Place on Ground button -->
                             <Button Content="⬇ Place on Ground"
-                                    Click="OnPlaceOnGround_Click"
+                                    Command="{Binding PlaceOnGroundCommand}"
+                                    IsEnabled="{Binding HasModel, Mode=OneWay}"
                                     Margin="5" Padding="6,3"
                                     FontSize="11" Height="24" />
                         </WrapPanel>

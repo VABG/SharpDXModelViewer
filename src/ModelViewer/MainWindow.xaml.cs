@@ -15,8 +15,9 @@ namespace ModelViewer;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private Renderer? _renderer;
+        private Renderer? _renderer;
     private SceneModelPanelViewModel? _sceneViewModel;
+    private ModelTransformViewModel? _transformViewModel;
 
     public MainWindow()
     {
@@ -43,9 +44,14 @@ public partial class MainWindow : Window
             // ── Wire up status bar ──────────────────────────────────────
             _renderer.OnFpsChanged = fps => { Dispatcher.Invoke(() => StatusBar.FpsText = $"FPS: {fps}"); };
 
-                        // ── Wire up scene-model panel via MVVM ──────────────────────
+                                                // ── Wire up scene-model panel via MVVM ──────────────────────
                         _sceneViewModel = new SceneModelPanelViewModel(_renderer.ModelList.ModelsCollection);
                         ScenePanel.DataContext = _sceneViewModel;
+
+                        // ── Wire up transform panel via MVVM ────────────────────────
+                        _transformViewModel = new ModelTransformViewModel();
+                        TransformPanel.DataContext = _transformViewModel;
+
                         RegisterMessengerHandlers();
 
             // ── Wire up light-control panel ─────────────────────────────
@@ -100,16 +106,16 @@ public partial class MainWindow : Window
             StatusBar.StatusText = $"Removed: {message.Value.DisplayName}";
         });
 
-        WeakReferenceMessenger.Default.Register<ClearSceneRequestedMessage>(this, (recipient, message) =>
+                WeakReferenceMessenger.Default.Register<ClearSceneRequestedMessage>(this, (recipient, message) =>
         {
             _renderer?.ModelList.Clear();
             StatusBar.StatusText = "Scene cleared";
-            TransformPanel.SelectModel(null);
+            _transformViewModel?.SelectModel(null);
         });
 
-        WeakReferenceMessenger.Default.Register<SceneModelSelectionChangedMessage>(this, (recipient, message) =>
+                WeakReferenceMessenger.Default.Register<SceneModelSelectionChangedMessage>(this, (recipient, message) =>
         {
-            TransformPanel.SelectModel(message.Value);
+            _transformViewModel?.SelectModel(message.Value);
             StatusBar.StatusText = message.Value is null
                 ? "No model selected"
                 : $"Selected: {message.Value.DisplayName}";
@@ -197,7 +203,7 @@ public partial class MainWindow : Window
 
             StatusBar.StatusText = $"Scene loaded: {System.IO.Path.GetFileName(dialog.FileName)}";
 
-                        // Re-select the first model if any exist
+                                                // Re-select the first model if any exist
             var models = _renderer.ModelList.GetSnapshot();
             if (models.Count > 0)
             {
@@ -205,7 +211,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                TransformPanel.SelectModel(null);
+                _transformViewModel?.SelectModel(null);
             }
         }
         catch (Exception ex)
