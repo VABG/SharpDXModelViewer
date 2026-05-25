@@ -11,14 +11,16 @@ namespace ModelViewer.Converters;
 [ValueConversion(typeof(bool), typeof(Visibility))]
 public sealed class BooleanToVisibilityConverter : MarkupExtension, IValueConverter
 {
-    public object Convert(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object Convert(object value, System.Type targetType, object parameter,
+        System.Globalization.CultureInfo culture)
     {
         if (value is bool b)
             return b ? Visibility.Visible : Visibility.Collapsed;
         return Visibility.Collapsed;
     }
 
-    public object ConvertBack(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object ConvertBack(object value, System.Type targetType, object parameter,
+        System.Globalization.CultureInfo culture)
     {
         if (value is Visibility v)
             return v == Visibility.Visible;

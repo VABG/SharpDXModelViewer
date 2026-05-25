@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+
 namespace ModelViewer.Controls;
 
 /// <summary>
@@ -13,4 +14,3 @@ internal partial class ModelTransformPanel : UserControl
         InitializeComponent();
     }
 }
-

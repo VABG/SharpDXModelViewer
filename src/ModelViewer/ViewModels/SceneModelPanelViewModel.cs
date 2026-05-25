@@ -18,14 +18,12 @@ public partial class SceneModelPanelViewModel : ObservableObject
     /// <summary>The live collection of scene models (shared with the renderer).</summary>
     public ObservableCollection<SceneModel> Models { get; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasSelection))]
     private SceneModel? _selectedModel;
 
     public bool HasSelection => SelectedModel is not null;
 
-    [ObservableProperty]
-    private bool isExpanded = true;
+    [ObservableProperty] private bool _isExpanded = true;
 
     /// <summary>
     /// Initializes the ViewModel with the given model collection.
@@ -106,4 +104,3 @@ public partial class SceneModelPanelViewModel : ObservableObject
         IsExpanded = !IsExpanded;
     }
 }
-

@@ -17,15 +17,12 @@ public partial class ModelTransformViewModel : ObservableObject
 
     // ── Display state ────────────────────────────────────────────────
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasModel))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasModel))]
     private string _modelName = "(no selection)";
 
-    [ObservableProperty]
-    private bool _hasModel;
+    [ObservableProperty] private bool _hasModel;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ChevronAngle))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ChevronAngle))]
     private bool _isExpanded = true;
 
     /// <summary>Chevron rotation angle: 0 when expanded, -90 when collapsed.</summary>
@@ -33,30 +30,23 @@ public partial class ModelTransformViewModel : ObservableObject
 
     // ── Position ─────────────────────────────────────────────────────
 
-    [ObservableProperty]
-    private double _posX;
+    [ObservableProperty] private double _posX;
 
-    [ObservableProperty]
-    private double _posY;
+    [ObservableProperty] private double _posY;
 
-    [ObservableProperty]
-    private double _posZ;
+    [ObservableProperty] private double _posZ;
 
     // ── Rotation (degrees) ───────────────────────────────────────────
 
-    [ObservableProperty]
-    private double _rotX;
+    [ObservableProperty] private double _rotX;
 
-    [ObservableProperty]
-    private double _rotY;
+    [ObservableProperty] private double _rotY;
 
-    [ObservableProperty]
-    private double _rotZ;
+    [ObservableProperty] private double _rotZ;
 
     // ── Scale ────────────────────────────────────────────────────────
 
-    [ObservableProperty]
-    private double _scale = 1.0;
+    [ObservableProperty] private double _scale = 1.0;
 
     // ── Construction ─────────────────────────────────────────────────
 
@@ -76,8 +66,12 @@ public partial class ModelTransformViewModel : ObservableObject
         {
             ModelName = "(no selection)";
             HasModel = false;
-            PosX = 0; PosY = 0; PosZ = 0;
-            RotX = 0; RotY = 0; RotZ = 0;
+            PosX = 0;
+            PosY = 0;
+            PosZ = 0;
+            RotX = 0;
+            RotY = 0;
+            RotZ = 0;
             Scale = 1.0;
             return;
         }
