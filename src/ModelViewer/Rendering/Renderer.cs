@@ -266,6 +266,156 @@ public class Renderer : IDisposable
         context.VertexShader.SetConstantBuffer(2, _worldMatrixBuffer);
     }
 
+        /// <summary>
+        /// Renders the scene from the light's perspective into the shadow map.
+        /// </summary>
+        private void RenderShadowMapDepthPass(DeviceContext context, IReadOnlyList<SceneModel> snapshot)
+        {
+            if (_shadowMap == null || _shadowMap.ShadowDepthView == null)
+                return;
+
+            // Clear shadow map depth buffer to 1.0 (farthest possible depth)
+            context.ClearDepthStencilView(_shadowMap.ShadowDepthView,
+                DepthStencilClearFlags.Depth, 1.0f, 0);
+
+            // Bind shadow map as the depth target (no RTV — we only need depth)
+            context.OutputMerger.SetTargets(_shadowMap.ShadowDepthView);
+
+            // Set viewport to shadow map size
+            context.Rasterizer.SetViewport(0, 0, _shadowMap.Size, _shadowMap.Size);
+
+            // Update shadow constant buffer with LightViewProjection matrix + LightDirection
+            var cb = new ShadowConstantBuffer(_shadowMap.LightViewProjectionMatrix, _shadowMap.LightDirection);
+            cb.LightViewProjection.Transpose();
+
+            // Apply current UI-controlled lighting parameters from a thread-safe snapshot
+            ShadowSettingsSnapshot settings = _directionalLightSettings.CaptureSnapshot();
+            cb.PcfRadius = settings.PcfRadius;
+            cb.ShadowBias = settings.ShadowBias;
+            cb.ShadowNormalBias = settings.ShadowNormalBias;
+            cb.LightColor = settings.LightColor;
+            cb.AmbientColor = settings.AmbientColor;
+
+            context.MapSubresource(_shadowConstantBuffer, MapMode.WriteDiscard,
+                MapFlags.None, out var shadowData);
+            Marshal.StructureToPtr(cb, shadowData.DataPointer, false);
+            context.UnmapSubresource(_shadowConstantBuffer, 0);
+
+            // Set depth-pass pipeline state
+            context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
+            context.VertexShader.Set(_shadowVertexShader);
+            context.PixelShader.Set(_shadowPixelShader);
+            context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
+
+            // ── Draw all scene models into shadow map ──
+            foreach (var sm in snapshot)
+                DrawObject(context, sm);
+        }
+
+        /// <summary>
+        /// Uploads the current view and projection matrices to the GPU constant buffer at slot b0.
+        /// </summary>
+        private void UploadViewProjection(DeviceContext context)
+        {
+            var viewMatrix = _camera.ViewMatrix;
+            var projMatrix = _camera.ProjectionMatrix;
+            viewMatrix.Transpose();
+            projMatrix.Transpose();
+
+            context.MapSubresource(_viewProjectionBuffer, MapMode.WriteDiscard,
+                MapFlags.None, out var data);
+
+            // Write View matrix (first 64 bytes)
+            Marshal.StructureToPtr(viewMatrix, data.DataPointer, false);
+
+            // Write Projection matrix (next 64 bytes, offset by sizeof(Matrix))
+            IntPtr projPtr = IntPtr.Add(data.DataPointer, Marshal.SizeOf<Matrix>());
+            Marshal.StructureToPtr(projMatrix, projPtr, false);
+
+            context.UnmapSubresource(_viewProjectionBuffer, 0);
+        }
+
+        /// <summary>
+        /// Configures the full D3D11 pipeline state for the main scene pass:
+        /// shaders, constant buffers, shadow map bindings, depth stencil, and rasterizer state.
+        /// </summary>
+        private void SetupMainScenePipeline(DeviceContext context)
+        {
+            // ── Set pipeline state ─────────────────────────────────────────
+            context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
+            context.VertexShader.Set(_mainShaders.VertexShader);
+            context.PixelShader.Set(_mainShaders.PixelShader);
+            context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
+
+            // ── Bind shadow matrices at cbuffer slot b1 (vertex + pixel shader) ──
+            if (_shadowMap != null && _shadowConstantBuffer != null)
+            {
+                context.VertexShader.SetConstantBuffer(1, _shadowConstantBuffer);
+                context.PixelShader.SetConstantBuffer(1, _shadowConstantBuffer);
+            }
+
+            // ── Bind shadow map texture at t0 (pixel shader) ──
+            if (_shadowMap != null && _shadowMap.ShadowSrv != null)
+            {
+                context.PixelShader.SetShaderResource(0, _shadowMap.ShadowSrv);
+            }
+
+            context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
+            context.Rasterizer.State = _deviceManager.RasterizerState;
+        }
+
+        /// <summary>
+        /// Draws the grid and all scene models in the snapshot.
+        /// </summary>
+        private void DrawMainScene(DeviceContext context, IReadOnlyList<SceneModel> snapshot)
+        {
+            // ── Draw grid (always visible) ─────────────────────────────────
+            DrawObject(context, _grid!);
+
+            // ── Draw all scene models ────────────────────────────────────
+            foreach (var sm in snapshot)
+                DrawObject(context, sm);
+        }
+
+        /// <summary>
+        /// Processes a pending swap chain resize on the render thread.
+        /// </summary>
+        private void HandlePendingResize()
+    {
+        if (_surface.HasPendingResize)
+        {
+            var (newWidth, newHeight) = _surface.ConsumePendingResize();
+            _deviceManager.Resize(newWidth, newHeight);
+        }
+    }
+
+        /// <summary>
+    /// Returns the current back buffer dimensions.
+    /// </summary>
+    private (int Width, int Height) GetBackBufferDimensions()
+    {
+        using var backBuffer = _deviceManager.SwapChain.GetBackBuffer<Texture2D>(0);
+        return (backBuffer.Description.Width, backBuffer.Description.Height);
+    }
+
+    /// <summary>
+    /// Ticks the FPS counter. If a full second has elapsed, notifies the UI and resets.
+    /// </summary>
+    private void TickFps()
+    {
+        _frameCount++;
+        if (_fpsWatch.ElapsedMilliseconds >= 1000)
+        {
+            int fps = _frameCount;
+            _frameCount = 0;
+            _fpsWatch.Restart();
+
+            // Notify UI of FPS (callback is invoked on render thread;
+            // caller is responsible for marshaling to UI thread)
+            OnFpsChanged?.Invoke(fps);
+        }
+    }
+
     private void RenderLoop(CancellationToken token)
     {
         var device = _deviceManager.Device;
@@ -275,29 +425,17 @@ public class Renderer : IDisposable
         {
             try
             {
-                // ── Handle pending resize on the render thread ─────────────────
+                                // ── Handle pending resize on the render thread ─────────────────
                 // ArrangeOverride (UI thread) queues resize dimensions. We consume
                 // them here so ResizeBuffers runs while no resources are bound,
                 // avoiding device-resource-conflict exceptions.
-                if (_surface.HasPendingResize)
-                {
-                    var (newWidth, newHeight) = _surface.ConsumePendingResize();
-                    // DeviceManager.Resize does the full atomic sequence:
-                    //   1. Flush GPU (drain commands referencing old back buffer)
-                    //   2. Dispose old RTV + depth stencil (release COM refs)
-                    //   3. ResizeBuffers (now safe — no live references)
-                    //   4. Create new RTV + depth stencil from new back buffer
-                    _deviceManager.Resize(newWidth, newHeight);
-                }
+                HandlePendingResize();
 
                 // ── Query back buffer dimensions ───────────────────────────────
                 // SwapChain.Description.ModeDescription is frozen at creation time
                 // (1×1).  Read the live back buffer instead, which reflects
                 // ResizeBuffers calls from ArrangeOverride.
-                var swapChain = _deviceManager.SwapChain;
-                using var backBuffer = swapChain.GetBackBuffer<Texture2D>(0);
-                int width = backBuffer.Description.Width;
-                int height = backBuffer.Description.Height;
+                var (width, height) = GetBackBufferDimensions();
 
                 // Wait until WPF layout has resized the swap chain to a real size.
                 // The initial window is 1×1; ArrangeOverride will resize it once
@@ -336,51 +474,13 @@ public class Renderer : IDisposable
                 // the shadow depth pass and the main scene pass.
                 var snapshot = _modelList.GetSnapshot();
 
-                // ═══════════════════════════════════════════════════════════════
+                                // ═══════════════════════════════════════════════════════════════
                 //  SHADOW MAP DEPTH PASS
                 //  Render the scene from the light's perspective into the shadow map.
                 // ═══════════════════════════════════════════════════════════════
-                if (_shadowMap != null && _shadowMap.ShadowDepthView != null)
-                {
-                    // Clear shadow map depth buffer to 1.0 (farthest possible depth)
-                    context.ClearDepthStencilView(_shadowMap.ShadowDepthView,
-                        DepthStencilClearFlags.Depth, 1.0f, 0);
+                RenderShadowMapDepthPass(context, snapshot);
 
-                    // Bind shadow map as the depth target (no RTV — we only need depth)
-                    context.OutputMerger.SetTargets(_shadowMap.ShadowDepthView);
-
-                    // Set viewport to shadow map size
-                    context.Rasterizer.SetViewport(0, 0, _shadowMap.Size, _shadowMap.Size);
-
-                    // Update shadow constant buffer with LightViewProjection matrix + LightDirection
-                    var cb = new ShadowConstantBuffer(_shadowMap.LightViewProjectionMatrix, _shadowMap.LightDirection);
-                    cb.LightViewProjection.Transpose();
-
-                    // Apply current UI-controlled lighting parameters from a thread-safe snapshot
-                    ShadowSettingsSnapshot settings = _directionalLightSettings.CaptureSnapshot();
-                    cb.PcfRadius = settings.PcfRadius;
-                    cb.ShadowBias = settings.ShadowBias;
-                    cb.ShadowNormalBias = settings.ShadowNormalBias;
-                    cb.LightColor = settings.LightColor;
-                    cb.AmbientColor = settings.AmbientColor;
-
-                    context.MapSubresource(_shadowConstantBuffer, MapMode.WriteDiscard,
-                        MapFlags.None, out var shadowData);
-                    Marshal.StructureToPtr(cb, shadowData.DataPointer, false);
-                    context.UnmapSubresource(_shadowConstantBuffer, 0);
-
-                                        // Set depth-pass pipeline state
-                    context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
-                    context.VertexShader.Set(_shadowVertexShader);
-                    context.PixelShader.Set(_shadowPixelShader);
-                    context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
-
-                    // ── Draw all scene models into shadow map ──
-                    foreach (var sm in snapshot)
-                        DrawObject(context, sm);
-                }
-
-                // ═══════════════════════════════════════════════════════════════
+                                // ═══════════════════════════════════════════════════════════════
                 //  MAIN SCENE PASS
                 //  Restore main targets and render with shadows applied.
                 // ═══════════════════════════════════════════════════════════════
@@ -390,70 +490,21 @@ public class Renderer : IDisposable
                 context.OutputMerger.SetTargets(depthStencilView, renderTargetView);
 
                 // ── Update constant buffer (View + Projection matrices) ────────
-                var viewMatrix = _camera.ViewMatrix;
-                var projMatrix = _camera.ProjectionMatrix;
-                viewMatrix.Transpose();
-                projMatrix.Transpose();
+                UploadViewProjection(context);
 
-                // Map the dynamic buffer, write both matrices, then unmap
-                context.MapSubresource(_viewProjectionBuffer, MapMode.WriteDiscard,
-                    MapFlags.None, out var data);
+                // ── Set pipeline state ─────────────────────────────────────────
+                SetupMainScenePipeline(context);
 
-                // Write View matrix (first 64 bytes)
-                Marshal.StructureToPtr(viewMatrix, data.DataPointer, false);
-
-                // Write Projection matrix (next 64 bytes, offset by sizeof(Matrix))
-                IntPtr projPtr = IntPtr.Add(data.DataPointer, Marshal.SizeOf<Matrix>());
-                Marshal.StructureToPtr(projMatrix, projPtr, false);
-
-                context.UnmapSubresource(_viewProjectionBuffer, 0);
-
-                                // ── Set pipeline state ─────────────────────────────────────────
-                context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
-                context.VertexShader.Set(_mainShaders.VertexShader);
-                context.PixelShader.Set(_mainShaders.PixelShader);
-                context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
-
-                // ── Bind shadow matrices at cbuffer slot b1 (vertex + pixel shader) ──
-                if (_shadowMap != null && _shadowConstantBuffer != null)
-                {
-                    context.VertexShader.SetConstantBuffer(1, _shadowConstantBuffer);
-                    context.PixelShader.SetConstantBuffer(1, _shadowConstantBuffer);
-                }
-
-                // ── Bind shadow map texture at t0 (pixel shader) ──
-                if (_shadowMap != null && _shadowMap.ShadowSrv != null)
-                {
-                    context.PixelShader.SetShaderResource(0, _shadowMap.ShadowSrv);
-                }
-
-                context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
-                context.Rasterizer.State = _deviceManager.RasterizerState;
-
-                // ── Draw grid (always visible) ─────────────────────────────────
-                DrawObject(context, _grid!);
-
-                // ── Draw all scene models ────────────────────────────────────
-                foreach (var sm in snapshot)
-                    DrawObject(context, sm);
+                // ── Draw grid and all scene models ─────────────────────────────
+                DrawMainScene(context, snapshot);
 
                 // ── Unbind shadow map resources (good practice before present) ──
                 context.PixelShader.SetShaderResource(0, null);
 
-                // ── Present ────────────────────────────────────────────────────
+                                // ── Present ────────────────────────────────────────────────────
                 _surface.Present();
 
-                _frameCount++;
-                if (_fpsWatch.ElapsedMilliseconds >= 1000)
-                {
-                    int fps = _frameCount;
-                    _frameCount = 0;
-                    _fpsWatch.Restart();
-
-                    // Notify UI of FPS (callback is invoked on render thread;
-                    // caller is responsible for marshaling to UI thread)
-                    OnFpsChanged?.Invoke(fps);
-                }
+                TickFps();
 
                 Thread.Sleep(1);
             }
