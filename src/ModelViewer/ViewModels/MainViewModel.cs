@@ -95,8 +95,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             TransformPanelVm.SelectModel(null);
         });
 
-        WeakReferenceMessenger.Default.Register<SceneModelSelectionChangedMessage>(this, (recipient, message) =>
+                WeakReferenceMessenger.Default.Register<SceneModelSelectionChangedMessage>(this, (recipient, message) =>
         {
+            _renderer?.SetSelectedModel(message.Value);
             TransformPanelVm.SelectModel(message.Value);
             StatusBarVm.StatusText = message.Value is null
                 ? "No model selected"

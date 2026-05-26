@@ -22,15 +22,33 @@ public class Renderer : IDisposable
     private CompiledShaders? _mainShaders;
     private readonly SharpDX.Direct3D11.Buffer? _viewProjectionBuffer;
 
-    // ── Shadow rendering pipeline (self-contained) ──
+        // ── Shadow rendering pipeline (self-contained) ──
     private readonly ShadowRenderer? _shadowRenderer;
+
+    // ── Stencil selection pipeline (self-contained) ──
+    private readonly StencilSelectionRenderer? _stencilSelectionRenderer;
 
     // ── World matrix constant buffer (cbuffer b2, for main scene pass) ──
     private SharpDX.Direct3D11.Buffer? _worldMatrixBuffer;
 
-    // Scene state
+        // Scene state
     private readonly ModelList _modelList = new();
     private readonly Grid? _grid;
+
+    // ── Selected model tracking (thread-safe) ──
+    private readonly object _selectedModelLock = new();
+    private SceneModel? _selectedModel;
+
+    /// <summary>
+    /// Sets the currently selected model. Call from the UI thread.
+    /// </summary>
+    public void SetSelectedModel(SceneModel? model)
+    {
+        lock (_selectedModelLock)
+        {
+            _selectedModel = model;
+        }
+    }
 
     // Render loop state
     private readonly CancellationTokenSource _cts = new();
@@ -100,6 +118,7 @@ public class Renderer : IDisposable
             ShaderCompiler.ResolveShaderPath("PixelShader.hlsl"));
 
         _shadowRenderer = new ShadowRenderer(_deviceManager.Device, _directionalLightSettings);
+        _stencilSelectionRenderer = new StencilSelectionRenderer(_deviceManager.Device, _deviceManager);
         // Create view-projection constant buffer (non-generic for SharpDX 4.2.0)
         // Holds two 4x4 matrices (View + Projection) = 128 bytes
         var cbDesc = new BufferDescription
@@ -269,17 +288,51 @@ public class Renderer : IDisposable
         context.Rasterizer.State = _deviceManager.RasterizerState;
     }
 
-    /// <summary>
+        /// <summary>
     /// Draws the grid and all scene models in the snapshot.
+    /// The selected model is drawn with stencil buffer stamping to enable
+    /// highlight overlay rendering.
     /// </summary>
     private void DrawMainScene(DeviceContext context, IReadOnlyList<SceneModel> snapshot)
     {
         // ── Draw grid (always visible) ─────────────────────────────────
         DrawObject(context, _grid!);
 
+        // ── Determine which model is selected (thread-safe snapshot) ──
+        SceneModel? selectedModel;
+        lock (_selectedModelLock)
+        {
+            selectedModel = _selectedModel;
+        }
+
         // ── Draw all scene models ────────────────────────────────────
         foreach (var sm in snapshot)
-            DrawObject(context, sm);
+        {
+            if (sm == selectedModel && _stencilSelectionRenderer != null)
+            {
+                // ── Draw selected model with stencil stamping ──
+                _stencilSelectionRenderer.BeginSelectedModelPass(context);
+                
+                // Upload world matrix via stencil renderer (uses its own constant buffer)
+                _stencilSelectionRenderer.UploadWorldMatrix(context, sm.Transform);
+                
+                var stride = VertexPositionNormalTexture.SizeInBytes;
+                context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
+                    sm.VertexBuffer!, stride, 0));
+                context.InputAssembler.SetIndexBuffer(sm.IndexBuffer!,
+                    Format.R32_UInt, 0);
+                context.InputAssembler.PrimitiveTopology =
+                    SharpDX.Direct3D.PrimitiveTopology.TriangleList;
+                context.DrawIndexed(sm.IndexCount, 0, 0);
+                
+                _stencilSelectionRenderer.EndSelectedModelPass(context);
+            }
+            else
+            {
+                // ── Draw normal model (no stencil write) ──
+                DrawObject(context, sm);
+            }
+        }
     }
 
     /// <summary>
@@ -393,8 +446,12 @@ public class Renderer : IDisposable
                 DrawMainScene(context, snapshot);
 
 
-                // ── Unbind shadow map resources (good practice before present) ──
+                                // ── Unbind shadow map resources (good practice before present) ──
                 _shadowRenderer?.UnbindFromMainPass(context);
+
+                // ── Draw stencil selection overlay ─────────────────────────────
+                // Must be drawn after all scene geometry but before Present()
+                _stencilSelectionRenderer?.DrawOverlay(context);
 
                 // ── Present ────────────────────────────────────────────────────
                 _surface.Present();
@@ -447,12 +504,14 @@ public class Renderer : IDisposable
         _renderLoopTask?.Wait(2000);
         _updateLoopTask?.Wait(2000);
 
-        _inputHandler.Dispose();
+                _inputHandler.Dispose();
         _modelList.Dispose();
         _grid?.Dispose();
         _worldMatrixBuffer?.Dispose();
         _mainShaders?.Dispose();
         _viewProjectionBuffer?.Dispose();
+        _shadowRenderer?.Dispose();
+        _stencilSelectionRenderer?.Dispose();
         _deviceManager.Dispose();
         _surface.Dispose();
     }
