@@ -378,11 +378,7 @@ public class Renderer : IDisposable
                 // This snapshot is valid for the entire frame and is used in both
                 // the shadow depth pass and the main scene pass.
                 var snapshot = _modelList.GetSnapshot();
-
-                // ═══════════════════════════════════════════════════════════════
-                //  SHADOW MAP DEPTH PASS
-                //  Render the scene from the light's perspective into the shadow map.
-                // ═══════════════════════════════════════════════════════════════
+                
                 _shadowRenderer?.RenderDepthPass(context, snapshot);
 
                 // ═══════════════════════════════════════════════════════════════
@@ -390,17 +386,10 @@ public class Renderer : IDisposable
                 //  Restore main targets and render with shadows applied.
                 // ═══════════════════════════════════════════════════════════════
 
-                // Restore main viewport and render targets
                 context.Rasterizer.SetViewport(0, 0, width, height);
                 context.OutputMerger.SetTargets(depthStencilView, renderTargetView);
-
-                // ── Update constant buffer (View + Projection matrices) ────────
                 UploadViewProjection(context);
-
-                // ── Set pipeline state ─────────────────────────────────────────
                 SetupMainScenePipeline(context);
-
-                // ── Draw grid and all scene models ─────────────────────────────
                 DrawMainScene(context, snapshot);
 
 
@@ -420,7 +409,7 @@ public class Renderer : IDisposable
             }
             catch (SharpDXException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Render error: {ex.Message}");
+                Debug.WriteLine($"Render error: {ex.Message}");
                 Thread.Sleep(16);
             }
         }

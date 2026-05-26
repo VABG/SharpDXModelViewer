@@ -216,10 +216,10 @@ public class ShadowRenderer : IDisposable
 
     public void Dispose()
     {
-        _shadowMap?.Dispose();
-        _shadowVertexShader?.Dispose();
-        _shadowPixelShader?.Dispose();
-        _shadowConstantBuffer?.Dispose();
-        _worldMatrixBuffer?.Dispose();
+        _shadowMap.Dispose();
+        _shadowVertexShader.Dispose();
+        _shadowPixelShader.Dispose();
+        _shadowConstantBuffer.Dispose();
+        _worldMatrixBuffer.Dispose();
     }
 }

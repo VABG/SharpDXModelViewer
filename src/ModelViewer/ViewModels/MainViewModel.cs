@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -176,7 +175,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             // Re-select the first model if any exist
             var models = _renderer.ModelList.GetSnapshot();
-            if (models.Count > 0)
+            if (models.Length > 0)
             {
                 ScenePanelVm?.SelectModel(models[0]);
             }

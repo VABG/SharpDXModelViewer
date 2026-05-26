@@ -26,21 +26,21 @@ public class D3DRenderSurface : HwndHost
     private SwapChain? _swapChain;
     private SharpDX.Direct3D11.Device? _device;
     private IntPtr _hwnd = IntPtr.Zero;
-    private int _lastWidth = 0;
-    private int _lastHeight = 0;
+    private int _lastWidth;
+    private int _lastHeight;
 
     // Pending resize dimensions — set by ArrangeOverride (UI thread), consumed by the render thread.
-    private int _pendingWidth = 0;
-    private int _pendingHeight = 0;
-    private bool _pendingResize = false;
+    private int _pendingWidth;
+    private int _pendingHeight;
+    private bool _pendingResize;
 
     // Store the original window procedure so we can chain to it
     private IntPtr _originalWndProc;
-    private Format _rendertargetFormat = Format.R8G8B8A8_UNorm;
+    private readonly Format _renderTargetFormat = Format.R8G8B8A8_UNorm;
 
     // Static lookup: HWND -> D3DRenderSurface instance (for the WNDPROC callback)
-    private static readonly Dictionary<IntPtr, D3DRenderSurface> _instances = new();
-    private static readonly object _instancesLock = new();
+    private static readonly Dictionary<IntPtr, D3DRenderSurface> Instances = new();
+    private static readonly Lock InstancesLock = new();
 
     // Keep a rooted reference to the delegate to prevent GC
     private static readonly WndProcDelegate _wndProcDelegate = WndProc;
@@ -180,9 +180,9 @@ public class D3DRenderSurface : HwndHost
             throw new InvalidOperationException("Failed to create rendering window handle.");
 
         // Register this instance so our static WNDPROC can find it
-        lock (_instancesLock)
+        lock (InstancesLock)
         {
-            _instances[_hwnd] = this;
+            Instances[_hwnd] = this;
         }
 
         // Install our custom WNDPROC to intercept mouse messages.
@@ -201,7 +201,7 @@ public class D3DRenderSurface : HwndHost
                 IsWindowed = true,
                 SwapEffect = SwapEffect.Discard,
                 OutputHandle = _hwnd,
-                ModeDescription = new ModeDescription(0, 0, new Rational(60, 1), _rendertargetFormat),
+                ModeDescription = new ModeDescription(0, 0, new Rational(60, 1), _renderTargetFormat),
                 SampleDescription = new SampleDescription(4, 0),
                 Flags = SwapChainFlags.None,
             };
@@ -268,9 +268,9 @@ public class D3DRenderSurface : HwndHost
         }
 
         // Unregister from the static lookup
-        lock (_instancesLock)
+        lock (InstancesLock)
         {
-            _instances.Remove(_hwnd);
+            Instances.Remove(_hwnd);
         }
 
         _swapChain?.Dispose();
@@ -292,10 +292,10 @@ public class D3DRenderSurface : HwndHost
     private static IntPtr WndProc(IntPtr hWnd, int uMsg, IntPtr wParam, IntPtr lParam)
     {
         // Find the D3DRenderSurface instance associated with this HWND
-        D3DRenderSurface? surface = null;
-        lock (_instancesLock)
+        D3DRenderSurface? surface;
+        lock (InstancesLock)
         {
-            _instances.TryGetValue(hWnd, out surface);
+            Instances.TryGetValue(hWnd, out surface);
         }
 
         if (uMsg is 132 or 70)
@@ -350,7 +350,7 @@ public class D3DRenderSurface : HwndHost
                 case WM_MOUSEWHEEL:
                 {
                     surface.LastMousePosition = ExtractMousePosition(lParam);
-                    int delta = (int)(short)((wParam.ToInt64() >> 16) & 0xFFFF);
+                    int delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
                     surface.RaiseWpfMouseWheel(delta);
                     break;
                 }
@@ -358,7 +358,7 @@ public class D3DRenderSurface : HwndHost
         }
 
         // Always forward to the original/default window procedure
-        if (surface?._originalWndProc != IntPtr.Zero)
+        if (surface != null && surface._originalWndProc != IntPtr.Zero)
         {
             return CallWindowProc(surface._originalWndProc, hWnd, uMsg, wParam, lParam);
         }
@@ -443,7 +443,7 @@ public class D3DRenderSurface : HwndHost
 
         try
         {
-            _swapChain.ResizeBuffers(1, width, height, _rendertargetFormat, SwapChainFlags.None);
+            _swapChain.ResizeBuffers(1, width, height, _renderTargetFormat, SwapChainFlags.None);
         }
         catch (SharpDXException ex)
         {

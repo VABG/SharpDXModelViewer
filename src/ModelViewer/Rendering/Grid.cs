@@ -18,12 +18,12 @@ public class Grid : DrawableObject
     /// <summary>
     /// Number of divisions along each axis (grid will have divisionsCount + 1 lines per axis).
     /// </summary>
-    public int DivisionsCount { get; }
+    private readonly int _divisionsCount;
 
     /// <summary>
     /// Total width/height of the grid in world units.
     /// </summary>
-    private float Size { get; }
+    private readonly float _size;
 
     public override int IndexCount => _indexCount;
     public override Buffer? VertexBuffer => _vertexBuffer;
@@ -44,8 +44,8 @@ public class Grid : DrawableObject
 
     private Grid(float size, int divisionsCount)
     {
-        Size = size;
-        DivisionsCount = divisionsCount;
+        _size = size;
+        _divisionsCount = divisionsCount;
     }
 
     private void CreateBuffers(Device device)
@@ -66,8 +66,8 @@ public class Grid : DrawableObject
         var vertices = new List<VertexPositionNormalTexture>();
         var indices = new List<int>();
 
-        float halfSize = Size * 0.5f;
-        float step = Size / DivisionsCount;
+        float halfSize = _size * 0.5f;
+        float step = _size / _divisionsCount;
 
         // Slight Y offset so grid quads don't z-fight with models resting on Y=0
         const float gridY = -0.01f;
@@ -82,7 +82,7 @@ public class Grid : DrawableObject
         // We draw lines along X and Z axes. Each "line" is a thin rectangle
         // made of 2 triangles (6 indices).
 
-        for (int i = 0; i <= DivisionsCount; i++)
+        for (int i = 0; i <= _divisionsCount; i++)
         {
             float t = -halfSize + i * step;
 

@@ -14,7 +14,7 @@ public sealed class CompiledShaders : IDisposable
     public VertexShader VertexShader { get; }
     public PixelShader PixelShader { get; }
     public InputLayout InputLayout { get; }
-    public ShaderSignature InputSignature { get; }
+    private readonly ShaderSignature _inputSignature;
 
     public CompiledShaders(
         VertexShader vertexShader,
@@ -25,15 +25,15 @@ public sealed class CompiledShaders : IDisposable
         VertexShader = vertexShader;
         PixelShader = pixelShader;
         InputLayout = inputLayout;
-        InputSignature = inputSignature;
+        _inputSignature = inputSignature;
     }
 
     public void Dispose()
     {
-        VertexShader?.Dispose();
-        PixelShader?.Dispose();
-        InputLayout?.Dispose();
-        InputSignature?.Dispose();
+        VertexShader.Dispose();
+        PixelShader.Dispose();
+        InputLayout.Dispose();
+        _inputSignature.Dispose();
     }
 }
 

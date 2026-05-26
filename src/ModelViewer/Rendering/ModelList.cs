@@ -9,14 +9,14 @@ namespace ModelViewer.Rendering;
 /// </summary>
 public class ModelList : IDisposable
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly List<SceneModel> _models = new();
 
     /// <summary>
     /// Live collection that stays in sync with the internal list.
     /// Safe for WPF data-binding on the UI thread.
     /// </summary>
-    public ObservableCollection<SceneModel> ModelsCollection { get; } = new();
+    public ObservableCollection<SceneModel> ModelsCollection { get; } = [];
 
     /// <summary>
     /// Read-only view of the current models. Safe for the UI thread to bind to.
@@ -115,10 +115,10 @@ public class ModelList : IDisposable
     /// The returned list is a point-in-time copy and does not hold references
     /// to the internal collection.
     /// </summary>
-    public List<SceneModel> GetSnapshot()
+    public SceneModel[] GetSnapshot()
     {
         lock (_lock)
-            return new List<SceneModel>(_models);
+            return _models.ToArray();
     }
 
     /// <summary>
