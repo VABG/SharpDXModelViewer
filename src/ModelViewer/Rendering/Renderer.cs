@@ -18,17 +18,14 @@ public class Renderer : IDisposable
     private readonly Camera _camera;
     private readonly InputHandler _inputHandler;
 
-        // Shader pipeline resources
+    // Shader pipeline resources
     private CompiledShaders? _mainShaders;
     private readonly SharpDX.Direct3D11.Buffer? _viewProjectionBuffer;
 
-    // ── Shadow map resources ──
-    private ShadowMap? _shadowMap;
-    private VertexShader? _shadowVertexShader;
-    private PixelShader? _shadowPixelShader;
-    private SharpDX.Direct3D11.Buffer? _shadowConstantBuffer;
+    // ── Shadow rendering pipeline (self-contained) ──
+    private readonly ShadowRenderer? _shadowRenderer;
 
-    // ── World matrix constant buffer (cbuffer b2) ──
+    // ── World matrix constant buffer (cbuffer b2, for main scene pass) ──
     private SharpDX.Direct3D11.Buffer? _worldMatrixBuffer;
 
     // Scene state
@@ -50,11 +47,7 @@ public class Renderer : IDisposable
     /// </summary>
     public void SetLightDirection(Vector3 direction)
     {
-        if (_shadowMap == null) return;
-
-        // ShadowMap.UpdateLightCamera expects the direction the light shines FROM.
-        // It internally negates it to store the direction pointing TO the light.
-        _shadowMap.UpdateLightCamera(direction, sceneRadius: 150f, sceneHeight: 100f);
+        _shadowRenderer?.SetLightDirection(direction);
     }
 
     /// <summary>
@@ -105,8 +98,8 @@ public class Renderer : IDisposable
             _deviceManager.Device,
             ShaderCompiler.ResolveShaderPath("VertexShader.hlsl"),
             ShaderCompiler.ResolveShaderPath("PixelShader.hlsl"));
-        InitializeShadowMap();
 
+        _shadowRenderer = new ShadowRenderer(_deviceManager.Device, _directionalLightSettings);
         // Create view-projection constant buffer (non-generic for SharpDX 4.2.0)
         // Holds two 4x4 matrices (View + Projection) = 128 bytes
         var cbDesc = new BufferDescription
@@ -118,18 +111,7 @@ public class Renderer : IDisposable
             OptionFlags = ResourceOptionFlags.None,
         };
         _viewProjectionBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, cbDesc);
-
-        // ── Create shadow constant buffer (holds LightViewProjection matrix + LightDirection) ──
-        var shadowCbDesc = new BufferDescription
-        {
-            SizeInBytes = Marshal.SizeOf<ShadowConstantBuffer>(),
-            Usage = ResourceUsage.Dynamic,
-            BindFlags = BindFlags.ConstantBuffer,
-            CpuAccessFlags = CpuAccessFlags.Write,
-            OptionFlags = ResourceOptionFlags.None,
-        };
-        _shadowConstantBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, shadowCbDesc);
-
+        
         // ── Create world matrix constant buffer (cbuffer b2, one 4×4 matrix = 64 bytes) ──
         var worldCbDesc = new BufferDescription
         {
@@ -147,26 +129,6 @@ public class Renderer : IDisposable
         _inputHandler = new InputHandler(surface, _camera);
         StartUpdateLoop();
         StartRenderLoop();
-    }
-
-            /// <summary>
-    /// Creates the shadow map texture and compiles the depth-pass shaders.
-    /// </summary>
-    private void InitializeShadowMap()
-    {
-        var device = _deviceManager.Device;
-
-        // ── Create the shadow map (2048x2048, orthographic skylight) ──
-        _shadowMap = new ShadowMap(device, shadowSize: 2048);
-
-        // ── Compile depth-pass shaders ──
-        var shadowVsPath = ShaderCompiler.ResolveShaderPath("VertexShaderShadow.hlsl");
-        var shadowPsPath = ShaderCompiler.ResolveShaderPath("PixelShaderShadow.hlsl");
-
-        var (shadowVs, _) = ShaderCompiler.CompileVertexShader(device, shadowVsPath);
-        _shadowVertexShader = shadowVs;
-
-        _shadowPixelShader = ShaderCompiler.CompilePixelShader(device, shadowPsPath);
     }
 
     private void StartRenderLoop()
@@ -266,121 +228,64 @@ public class Renderer : IDisposable
         context.VertexShader.SetConstantBuffer(2, _worldMatrixBuffer);
     }
 
-        /// <summary>
-        /// Renders the scene from the light's perspective into the shadow map.
-        /// </summary>
-        private void RenderShadowMapDepthPass(DeviceContext context, IReadOnlyList<SceneModel> snapshot)
-        {
-            if (_shadowMap == null || _shadowMap.ShadowDepthView == null)
-                return;
+    /// <summary>
+    /// Uploads the current view and projection matrices to the GPU constant buffer at slot b0.
+    /// </summary>
+    private void UploadViewProjection(DeviceContext context)
+    {
+        var viewMatrix = _camera.ViewMatrix;
+        var projMatrix = _camera.ProjectionMatrix;
+        viewMatrix.Transpose();
+        projMatrix.Transpose();
 
-            // Clear shadow map depth buffer to 1.0 (farthest possible depth)
-            context.ClearDepthStencilView(_shadowMap.ShadowDepthView,
-                DepthStencilClearFlags.Depth, 1.0f, 0);
+        context.MapSubresource(_viewProjectionBuffer, MapMode.WriteDiscard,
+            MapFlags.None, out var data);
 
-            // Bind shadow map as the depth target (no RTV — we only need depth)
-            context.OutputMerger.SetTargets(_shadowMap.ShadowDepthView);
+        // Write View matrix (first 64 bytes)
+        Marshal.StructureToPtr(viewMatrix, data.DataPointer, false);
 
-            // Set viewport to shadow map size
-            context.Rasterizer.SetViewport(0, 0, _shadowMap.Size, _shadowMap.Size);
+        // Write Projection matrix (next 64 bytes, offset by sizeof(Matrix))
+        IntPtr projPtr = IntPtr.Add(data.DataPointer, Marshal.SizeOf<Matrix>());
+        Marshal.StructureToPtr(projMatrix, projPtr, false);
 
-            // Update shadow constant buffer with LightViewProjection matrix + LightDirection
-            var cb = new ShadowConstantBuffer(_shadowMap.LightViewProjectionMatrix, _shadowMap.LightDirection);
-            cb.LightViewProjection.Transpose();
+        context.UnmapSubresource(_viewProjectionBuffer, 0);
+    }
 
-            // Apply current UI-controlled lighting parameters from a thread-safe snapshot
-            ShadowSettingsSnapshot settings = _directionalLightSettings.CaptureSnapshot();
-            cb.PcfRadius = settings.PcfRadius;
-            cb.ShadowBias = settings.ShadowBias;
-            cb.ShadowNormalBias = settings.ShadowNormalBias;
-            cb.LightColor = settings.LightColor;
-            cb.AmbientColor = settings.AmbientColor;
+    /// <summary>
+    /// Configures the full D3D11 pipeline state for the main scene pass:
+    /// shaders, constant buffers, shadow map bindings, depth stencil, and rasterizer state.
+    /// </summary>
+    private void SetupMainScenePipeline(DeviceContext context)
+    {
+        // ── Set pipeline state ─────────────────────────────────────────
+        context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
+        context.VertexShader.Set(_mainShaders.VertexShader);
+        context.PixelShader.Set(_mainShaders.PixelShader);
+        context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
 
-            context.MapSubresource(_shadowConstantBuffer, MapMode.WriteDiscard,
-                MapFlags.None, out var shadowData);
-            Marshal.StructureToPtr(cb, shadowData.DataPointer, false);
-            context.UnmapSubresource(_shadowConstantBuffer, 0);
+        _shadowRenderer?.BindForMainPass(context);
+        
+        context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
+        context.Rasterizer.State = _deviceManager.RasterizerState;
+    }
 
-            // Set depth-pass pipeline state
-            context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
-            context.VertexShader.Set(_shadowVertexShader);
-            context.PixelShader.Set(_shadowPixelShader);
-            context.VertexShader.SetConstantBuffer(0, _shadowConstantBuffer);
+    /// <summary>
+    /// Draws the grid and all scene models in the snapshot.
+    /// </summary>
+    private void DrawMainScene(DeviceContext context, IReadOnlyList<SceneModel> snapshot)
+    {
+        // ── Draw grid (always visible) ─────────────────────────────────
+        DrawObject(context, _grid!);
 
-            // ── Draw all scene models into shadow map ──
-            foreach (var sm in snapshot)
-                DrawObject(context, sm);
-        }
+        // ── Draw all scene models ────────────────────────────────────
+        foreach (var sm in snapshot)
+            DrawObject(context, sm);
+    }
 
-        /// <summary>
-        /// Uploads the current view and projection matrices to the GPU constant buffer at slot b0.
-        /// </summary>
-        private void UploadViewProjection(DeviceContext context)
-        {
-            var viewMatrix = _camera.ViewMatrix;
-            var projMatrix = _camera.ProjectionMatrix;
-            viewMatrix.Transpose();
-            projMatrix.Transpose();
-
-            context.MapSubresource(_viewProjectionBuffer, MapMode.WriteDiscard,
-                MapFlags.None, out var data);
-
-            // Write View matrix (first 64 bytes)
-            Marshal.StructureToPtr(viewMatrix, data.DataPointer, false);
-
-            // Write Projection matrix (next 64 bytes, offset by sizeof(Matrix))
-            IntPtr projPtr = IntPtr.Add(data.DataPointer, Marshal.SizeOf<Matrix>());
-            Marshal.StructureToPtr(projMatrix, projPtr, false);
-
-            context.UnmapSubresource(_viewProjectionBuffer, 0);
-        }
-
-        /// <summary>
-        /// Configures the full D3D11 pipeline state for the main scene pass:
-        /// shaders, constant buffers, shadow map bindings, depth stencil, and rasterizer state.
-        /// </summary>
-        private void SetupMainScenePipeline(DeviceContext context)
-        {
-            // ── Set pipeline state ─────────────────────────────────────────
-            context.InputAssembler.InputLayout = _mainShaders!.InputLayout;
-            context.VertexShader.Set(_mainShaders.VertexShader);
-            context.PixelShader.Set(_mainShaders.PixelShader);
-            context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
-
-            // ── Bind shadow matrices at cbuffer slot b1 (vertex + pixel shader) ──
-            if (_shadowMap != null && _shadowConstantBuffer != null)
-            {
-                context.VertexShader.SetConstantBuffer(1, _shadowConstantBuffer);
-                context.PixelShader.SetConstantBuffer(1, _shadowConstantBuffer);
-            }
-
-            // ── Bind shadow map texture at t0 (pixel shader) ──
-            if (_shadowMap != null && _shadowMap.ShadowSrv != null)
-            {
-                context.PixelShader.SetShaderResource(0, _shadowMap.ShadowSrv);
-            }
-
-            context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
-            context.Rasterizer.State = _deviceManager.RasterizerState;
-        }
-
-        /// <summary>
-        /// Draws the grid and all scene models in the snapshot.
-        /// </summary>
-        private void DrawMainScene(DeviceContext context, IReadOnlyList<SceneModel> snapshot)
-        {
-            // ── Draw grid (always visible) ─────────────────────────────────
-            DrawObject(context, _grid!);
-
-            // ── Draw all scene models ────────────────────────────────────
-            foreach (var sm in snapshot)
-                DrawObject(context, sm);
-        }
-
-        /// <summary>
-        /// Processes a pending swap chain resize on the render thread.
-        /// </summary>
-        private void HandlePendingResize()
+    /// <summary>
+    /// Processes a pending swap chain resize on the render thread.
+    /// </summary>
+    private void HandlePendingResize()
     {
         if (_surface.HasPendingResize)
         {
@@ -389,7 +294,7 @@ public class Renderer : IDisposable
         }
     }
 
-        /// <summary>
+    /// <summary>
     /// Returns the current back buffer dimensions.
     /// </summary>
     private (int Width, int Height) GetBackBufferDimensions()
@@ -425,7 +330,7 @@ public class Renderer : IDisposable
         {
             try
             {
-                                // ── Handle pending resize on the render thread ─────────────────
+                // ── Handle pending resize on the render thread ─────────────────
                 // ArrangeOverride (UI thread) queues resize dimensions. We consume
                 // them here so ResizeBuffers runs while no resources are bound,
                 // avoiding device-resource-conflict exceptions.
@@ -474,13 +379,13 @@ public class Renderer : IDisposable
                 // the shadow depth pass and the main scene pass.
                 var snapshot = _modelList.GetSnapshot();
 
-                                // ═══════════════════════════════════════════════════════════════
+                // ═══════════════════════════════════════════════════════════════
                 //  SHADOW MAP DEPTH PASS
                 //  Render the scene from the light's perspective into the shadow map.
                 // ═══════════════════════════════════════════════════════════════
-                RenderShadowMapDepthPass(context, snapshot);
+                _shadowRenderer?.RenderDepthPass(context, snapshot);
 
-                                // ═══════════════════════════════════════════════════════════════
+                // ═══════════════════════════════════════════════════════════════
                 //  MAIN SCENE PASS
                 //  Restore main targets and render with shadows applied.
                 // ═══════════════════════════════════════════════════════════════
@@ -498,10 +403,11 @@ public class Renderer : IDisposable
                 // ── Draw grid and all scene models ─────────────────────────────
                 DrawMainScene(context, snapshot);
 
-                // ── Unbind shadow map resources (good practice before present) ──
-                context.PixelShader.SetShaderResource(0, null);
 
-                                // ── Present ────────────────────────────────────────────────────
+                // ── Unbind shadow map resources (good practice before present) ──
+                _shadowRenderer?.UnbindFromMainPass(context);
+
+                // ── Present ────────────────────────────────────────────────────
                 _surface.Present();
 
                 TickFps();
@@ -541,13 +447,6 @@ public class Renderer : IDisposable
     /// </summary>
     public ModelList ModelList => _modelList;
 
-    // Legacy alias for backward compatibility
-    public void LoadModel(string filePath)
-    {
-        _modelList.Clear();
-        _modelList.Add(_deviceManager.Device, filePath);
-    }
-
     public void ResetCamera()
     {
         _camera.Reset();
@@ -559,13 +458,9 @@ public class Renderer : IDisposable
         _renderLoopTask?.Wait(2000);
         _updateLoopTask?.Wait(2000);
 
-                _inputHandler.Dispose();
+        _inputHandler.Dispose();
         _modelList.Dispose();
         _grid?.Dispose();
-        _shadowMap?.Dispose();
-        _shadowVertexShader?.Dispose();
-        _shadowPixelShader?.Dispose();
-        _shadowConstantBuffer?.Dispose();
         _worldMatrixBuffer?.Dispose();
         _mainShaders?.Dispose();
         _viewProjectionBuffer?.Dispose();
