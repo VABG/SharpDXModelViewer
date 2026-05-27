@@ -312,19 +312,8 @@ public class Renderer : IDisposable
             {
                 // ── Draw selected model with stencil stamping ──
                 _stencilSelectionRenderer.BeginSelectedModelPass(context);
-                
                 // Upload world matrix via stencil renderer (uses its own constant buffer)
-                _stencilSelectionRenderer.UploadWorldMatrix(context, sm.Transform);
-                
-                var stride = VertexPositionNormalTexture.SizeInBytes;
-                context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(
-                    sm.VertexBuffer!, stride, 0));
-                context.InputAssembler.SetIndexBuffer(sm.IndexBuffer!,
-                    Format.R32_UInt, 0);
-                context.InputAssembler.PrimitiveTopology =
-                    SharpDX.Direct3D.PrimitiveTopology.TriangleList;
-                context.DrawIndexed(sm.IndexCount, 0, 0);
-                
+                DrawObject(context, sm);
                 _stencilSelectionRenderer.EndSelectedModelPass(context);
             }
             else

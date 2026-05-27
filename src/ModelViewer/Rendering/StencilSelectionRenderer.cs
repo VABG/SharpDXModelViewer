@@ -3,7 +3,6 @@ using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using Buffer = SharpDX.Direct3D11.Buffer;
-using MapFlags = SharpDX.Direct3D11.MapFlags;
 using Device = SharpDX.Direct3D11.Device;
 
 namespace ModelViewer.Rendering;
@@ -110,8 +109,10 @@ public class StencilSelectionRenderer : IDisposable
         _overlayVertexBuffer = new Buffer(device, vbStream, vbDesc);
         Marshal.FreeCoTaskMem(vbPtr);
 
-        // ── Create index buffer (triangle list: 0,1,2 and 3,4,5) ──
-        var indices = new[] { 0, 1, 2, 3, 4, 5 };
+                // ── Create index buffer (triangle list: 0,1,2 and 3,5,4) ──
+        // Both triangles must be CCW to match the rasterizer state
+        // (IsFrontCounterClockwise = true, CullMode.Back)
+        var indices = new[] { 0, 2, 1, 3, 5, 4 };
         var ibDesc = new BufferDescription
         {
             SizeInBytes = indices.Length * sizeof(int),
@@ -224,23 +225,6 @@ public class StencilSelectionRenderer : IDisposable
 
         // Restore default blend state
         context.OutputMerger.SetBlendState(null, null, 0xFFFFFFFF);
-    }
-
-    /// <summary>
-    /// Uploads a model-space world matrix to the GPU constant buffer at slot b2.
-    /// Call once per draw with the object's current transform.
-    /// </summary>
-    public void UploadWorldMatrix(DeviceContext context, ModelTransform transform)
-    {
-        var world = transform.ToMatrix();
-        world.Transpose();
-
-        context.MapSubresource(_worldMatrixBuffer, MapMode.WriteDiscard,
-            MapFlags.None, out var map);
-        Marshal.StructureToPtr(world, map.DataPointer, false);
-        context.UnmapSubresource(_worldMatrixBuffer, 0);
-
-        context.VertexShader.SetConstantBuffer(2, _worldMatrixBuffer);
     }
 
     /// <summary>

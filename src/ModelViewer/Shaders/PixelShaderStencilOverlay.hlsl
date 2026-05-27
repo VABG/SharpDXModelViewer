@@ -30,5 +30,5 @@ float4 PSMain(float4 Position : SV_POSITION) : SV_TARGET
     }
 
     // Otherwise fully transparent — scene shows through
-    return float4(0.0f, 0.0f, 0.0f, 0.0f);
+    return float4(0.0f, 0.0f, 0.0f, 0.5f);
 }

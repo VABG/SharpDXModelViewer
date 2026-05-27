@@ -213,7 +213,7 @@ public class DeviceManager : IDisposable
             Height = height,
             MipLevels = 1,
             ArraySize = 1,
-            Format = Format.R32G8X24_Typeless, // Typeless allows both DSV and SRV bindings
+            Format = Format.R24G8_Typeless, // Typeless allows both DSV and SRV bindings
             SampleDescription = new SampleDescription(1, 0), // No MSAA — required for SRV binding
             Usage = ResourceUsage.Default,
             BindFlags = BindFlags.DepthStencil | BindFlags.ShaderResource,
@@ -225,7 +225,7 @@ public class DeviceManager : IDisposable
         // ── Create DSV with typed depth/stencil format ──
         var dsvDesc = new DepthStencilViewDescription
         {
-            Format = Format.D32_Float_S8X24_UInt,
+            Format = Format.D24_UNorm_S8_UInt,
             Dimension = DepthStencilViewDimension.Texture2D,
             Texture2D = { MipSlice = 0 },
         };
@@ -234,7 +234,7 @@ public class DeviceManager : IDisposable
         // ── Create SRV for stencil sampling (R8_UInt reads the stencil channel) ──
         var srvDesc = new ShaderResourceViewDescription
         {
-            Format = Format.R8_UInt,
+            Format = Format.R24_UNorm_X8_Typeless,
             Dimension = SharpDX.Direct3D.ShaderResourceViewDimension.Texture2D,
             Texture2D = { MostDetailedMip = 0, MipLevels = 1 },
         };
