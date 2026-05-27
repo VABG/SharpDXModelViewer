@@ -16,7 +16,6 @@ public class DeviceManager : IDisposable
     private DepthStencilView? _depthStencilView;
     private Texture2D? _depthStencilTexture;
     private ShaderResourceView? _depthStencilSrv; // SRV for stencil sampling in outline shader
-    private SamplerState? _pointSampler;
     private RasterizerState? _rasterizerState;
     private BlendState? _alphaBlendState; // For overlay rendering
 
@@ -29,8 +28,6 @@ public class DeviceManager : IDisposable
     public DepthStencilState? StencilWriteState => _stencilWriteState;
     public DepthStencilState? StencilTestState => _stencilTestState;
     public DepthStencilView? DepthStencilView => _depthStencilView;
-    public ShaderResourceView? DepthStencilSrv => _depthStencilSrv;
-    public SamplerState? PointSampler => _pointSampler;
     public RasterizerState? RasterizerState => _rasterizerState;
     public BlendState? AlphaBlendState => _alphaBlendState;
 
@@ -97,18 +94,6 @@ public class DeviceManager : IDisposable
     /// </summary>
     private void CreateDeviceIndependentStates()
     {
-        // ── Point sampler for stencil sampling in outline shader ──
-        var pointSamplerDesc = new SamplerStateDescription
-        {
-            Filter = Filter.MinMagMipPoint,
-            AddressU = TextureAddressMode.Clamp,
-            AddressV = TextureAddressMode.Clamp,
-            AddressW = TextureAddressMode.Clamp,
-            BorderColor = new SharpDX.Color4(0, 0, 0, 0),
-            ComparisonFunction = Comparison.Never,
-        };
-        _pointSampler = new SamplerState(Device, pointSamplerDesc);
-
         var depthStateDesc = new DepthStencilStateDescription
         {
             IsDepthEnabled = true,
@@ -235,48 +220,13 @@ public class DeviceManager : IDisposable
         // 3. Resize the swap chain — safe now because no live references remain
         _surface.ResizeSwapChain(width, height);
 
-        // 4. Create new resources from the resized back buffer
-        using var backBuffer = SwapChain.GetBackBuffer<Texture2D>(0);
-        _renderTargetView = new RenderTargetView(Device, backBuffer);
-
-        var depthDesc = new Texture2DDescription
-        {
-            Width = width,
-            Height = height,
-            MipLevels = 1,
-            ArraySize = 1,
-            Format = Format.R24G8_Typeless, // Typeless allows both DSV and SRV bindings
-            SampleDescription = new SampleDescription(1, 0), // No MSAA — required for SRV binding
-            Usage = ResourceUsage.Default,
-            BindFlags = BindFlags.DepthStencil | BindFlags.ShaderResource,
-            CpuAccessFlags = CpuAccessFlags.None,
-            OptionFlags = ResourceOptionFlags.None,
-        };
-        _depthStencilTexture = new Texture2D(Device, depthDesc);
-
-        // ── Create DSV with typed depth/stencil format ──
-        var dsvDesc = new DepthStencilViewDescription
-        {
-            Format = Format.D24_UNorm_S8_UInt,
-            Dimension = DepthStencilViewDimension.Texture2D,
-            Texture2D = { MipSlice = 0 },
-        };
-        _depthStencilView = new DepthStencilView(Device, _depthStencilTexture, dsvDesc);
-
-        // ── Create SRV for stencil sampling (R8_UInt reads the stencil channel) ──
-        var srvDesc = new ShaderResourceViewDescription
-        {
-            Format = Format.R24_UNorm_X8_Typeless,
-            Dimension = SharpDX.Direct3D.ShaderResourceViewDimension.Texture2D,
-            Texture2D = { MostDetailedMip = 0, MipLevels = 1 },
-        };
-        _depthStencilSrv = new ShaderResourceView(Device, _depthStencilTexture, srvDesc);
+                // 4. Create new resources from the resized back buffer
+        CreateBackBufferResources(width, height);
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        _pointSampler?.Dispose();
         _alphaBlendState?.Dispose();
         _depthStencilSrv?.Dispose();
         _stencilWriteState?.Dispose();
