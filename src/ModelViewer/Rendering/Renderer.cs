@@ -402,6 +402,13 @@ public class Renderer : IDisposable
                     continue;
                 }
 
+                // ── Take a thread-safe snapshot of scene models ──
+                // This snapshot is valid for the entire frame and is used in both
+                // the shadow depth pass and the main scene pass.
+                var snapshot = _modelList.GetSnapshot();
+                
+                _shadowRenderer?.RenderDepthPass(context, snapshot);
+                
                 // ── Set viewport ───────────────────────────────────────────────
                 // D3D11 default viewport is (0,0,0,0) — zero size means the
                 // rasterizer clips every primitive away. Must set it every frame
@@ -416,12 +423,7 @@ public class Renderer : IDisposable
                 // ── Camera ─────────────────────────────────────────────────────
                 _camera.UpdateProjection(width, height);
 
-                // ── Take a thread-safe snapshot of scene models ──
-                // This snapshot is valid for the entire frame and is used in both
-                // the shadow depth pass and the main scene pass.
-                var snapshot = _modelList.GetSnapshot();
-                
-                _shadowRenderer?.RenderDepthPass(context, snapshot);
+
 
                 // ═══════════════════════════════════════════════════════════════
                 //  MAIN SCENE PASS

@@ -216,6 +216,8 @@ public class StencilSelectionRenderer : IDisposable
 
         // Restore default blend state
         context.OutputMerger.SetBlendState(null, null, 0xFFFFFFFF);
+        
+        context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState, 0);
     }
 
     /// <summary>
