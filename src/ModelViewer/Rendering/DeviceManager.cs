@@ -12,6 +12,7 @@ public class DeviceManager : IDisposable
     private RenderTargetView? _renderTargetView;
     private DepthStencilState? _depthStencilState;
     private DepthStencilState? _stencilWriteState;
+    private DepthStencilState? _stencilTestState;
     private DepthStencilView? _depthStencilView;
     private Texture2D? _depthStencilTexture;
     private ShaderResourceView? _depthStencilSrv; // SRV for stencil sampling in outline shader
@@ -26,6 +27,7 @@ public class DeviceManager : IDisposable
     public RenderTargetView? RenderTargetView => _renderTargetView;
     public DepthStencilState? DepthStencilState => _depthStencilState;
     public DepthStencilState? StencilWriteState => _stencilWriteState;
+    public DepthStencilState? StencilTestState => _stencilTestState;
     public DepthStencilView? DepthStencilView => _depthStencilView;
     public ShaderResourceView? DepthStencilSrv => _depthStencilSrv;
     public SamplerState? PointSampler => _pointSampler;
@@ -145,6 +147,36 @@ public class DeviceManager : IDisposable
         };
         _stencilWriteState = new DepthStencilState(Device, stencilWriteDesc);
 
+        // ── Stencil-test state (used for overlay pass) ──
+        // Only passes fragments where stencil value == reference value.
+        // Depth testing is disabled so the overlay always draws on top.
+        // No stencil writes - we only read the existing stencil values.
+        var stencilTestDesc = new DepthStencilStateDescription
+        {
+            IsDepthEnabled = false,
+            DepthComparison = Comparison.Always,
+            DepthWriteMask = DepthWriteMask.Zero,
+
+            IsStencilEnabled = true,
+            StencilReadMask = 0xFF,
+            StencilWriteMask = 0x00, // Read-only during overlay pass
+            FrontFace = new DepthStencilOperationDescription
+            {
+                FailOperation = StencilOperation.Keep,
+                DepthFailOperation = StencilOperation.Keep,
+                PassOperation = StencilOperation.Keep,
+                Comparison = Comparison.Equal, // Only pass where stencil == ref
+            },
+            BackFace = new DepthStencilOperationDescription
+            {
+                FailOperation = StencilOperation.Keep,
+                DepthFailOperation = StencilOperation.Keep,
+                PassOperation = StencilOperation.Keep,
+                Comparison = Comparison.Equal,
+            },
+        };
+        _stencilTestState = new DepthStencilState(Device, stencilTestDesc);
+
         var rasterDesc = new RasterizerStateDescription
         {
             FillMode = FillMode.Solid,
@@ -248,6 +280,7 @@ public class DeviceManager : IDisposable
         _alphaBlendState?.Dispose();
         _depthStencilSrv?.Dispose();
         _stencilWriteState?.Dispose();
+        _stencilTestState?.Dispose();
         _depthStencilState?.Dispose();
         _depthStencilView?.Dispose();
         _depthStencilTexture?.Dispose();

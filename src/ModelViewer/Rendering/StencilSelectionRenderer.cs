@@ -168,20 +168,27 @@ public class StencilSelectionRenderer : IDisposable
         }
     }
 
-    /// <summary>
-    /// Draws a fullscreen overlay quad that visualizes the stencil buffer.
-    /// Pixels matching the selected model's stencil ID are highlighted in
-    /// semi-transparent cyan; all other pixels are fully transparent.
+        /// <summary>
+    /// Draws a fullscreen overlay quad that highlights pixels where the stencil
+    /// buffer matches the selected model's stencil ID.
+    ///
+    /// Uses the hardware stencil test (Comparison.Equal) so only fragments
+    /// matching StencilId pass through — the pixel shader just outputs a solid color.
     ///
     /// Call this just before Present(), after all scene geometry is drawn.
     /// </summary>
     public void DrawOverlay(DeviceContext context)
     {
-        // Unbind depth stencil view so overlay doesn't write depth
-        // (keep RTV bound so we can draw on top of the back buffer)
-        if (_deviceManager.RenderTargetView != null)
+        // Keep both RTV and DSV bound so the stencil test can read the stencil buffer
+        if (_deviceManager.RenderTargetView != null && _deviceManager.DepthStencilView != null)
         {
-            context.OutputMerger.SetTargets((DepthStencilView?)null, _deviceManager.RenderTargetView);
+            context.OutputMerger.SetTargets(_deviceManager.DepthStencilView, _deviceManager.RenderTargetView);
+        }
+
+        // Switch to stencil-test state: only pass fragments where stencil == StencilId
+        if (_deviceManager.StencilTestState != null)
+        {
+            context.OutputMerger.SetDepthStencilState(_deviceManager.StencilTestState, StencilId);
         }
 
         // Enable alpha blending so the overlay composites over the scene
@@ -195,18 +202,6 @@ public class StencilSelectionRenderer : IDisposable
         context.VertexShader.Set(_overlayVertexShader);
         context.PixelShader.Set(_overlayPixelShader);
 
-        // ── Bind stencil texture as SRV at t0 ──
-        if (_deviceManager.DepthStencilSrv != null)
-        {
-            context.PixelShader.SetShaderResource(0, _deviceManager.DepthStencilSrv);
-        }
-
-        // ── Bind point sampler at s0 ──
-        if (_deviceManager.PointSampler != null)
-        {
-            context.PixelShader.SetSampler(0, _deviceManager.PointSampler);
-        }
-
         // ── Bind fullscreen quad geometry ──
         var stride = Marshal.SizeOf<Vector4>();
         context.InputAssembler.SetVertexBuffers(0,
@@ -218,10 +213,6 @@ public class StencilSelectionRenderer : IDisposable
 
         // ── Draw overlay ──
         context.DrawIndexed(OverlayIndexCount, 0, 0);
-
-        // ── Cleanup: unbind overlay resources ──
-        context.PixelShader.SetShaderResource(0, null);
-        context.PixelShader.SetSampler(0, null);
 
         // Restore default blend state
         context.OutputMerger.SetBlendState(null, null, 0xFFFFFFFF);
