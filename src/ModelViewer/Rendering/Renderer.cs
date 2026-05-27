@@ -22,7 +22,7 @@ public class Renderer : IDisposable
     private CompiledShaders? _mainShaders;
     private readonly SharpDX.Direct3D11.Buffer? _viewProjectionBuffer;
 
-        // ── Shadow rendering pipeline (self-contained) ──
+    // ── Shadow rendering pipeline (self-contained) ──
     private readonly ShadowRenderer? _shadowRenderer;
 
     // ── Stencil selection pipeline (self-contained) ──
@@ -31,7 +31,7 @@ public class Renderer : IDisposable
     // ── World matrix constant buffer (cbuffer b2, for main scene pass) ──
     private SharpDX.Direct3D11.Buffer? _worldMatrixBuffer;
 
-        // Scene state
+    // Scene state
     private readonly ModelList _modelList = new();
     private readonly Grid? _grid;
 
@@ -130,7 +130,7 @@ public class Renderer : IDisposable
             OptionFlags = ResourceOptionFlags.None,
         };
         _viewProjectionBuffer = new SharpDX.Direct3D11.Buffer(_deviceManager.Device, cbDesc);
-        
+
         // ── Create world matrix constant buffer (cbuffer b2, one 4×4 matrix = 64 bytes) ──
         var worldCbDesc = new BufferDescription
         {
@@ -283,12 +283,12 @@ public class Renderer : IDisposable
         context.VertexShader.SetConstantBuffer(0, _viewProjectionBuffer);
 
         _shadowRenderer?.BindForMainPass(context);
-        
+
         context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
         context.Rasterizer.State = _deviceManager.RasterizerState;
     }
 
-        /// <summary>
+    /// <summary>
     /// Draws the grid and all scene models in the snapshot.
     /// The selected model is drawn with stencil buffer stamping to enable
     /// highlight overlay rendering.
@@ -303,24 +303,23 @@ public class Renderer : IDisposable
         lock (_selectedModelLock)
         {
             selectedModel = _selectedModel;
+            if (_selectedModel != null && _stencilSelectionRenderer != null)
+            {
+                // ── Draw selected model with stencil stamping ──
+                _stencilSelectionRenderer.BeginSelectedModelPass(context);
+                // Upload world matrix via stencil renderer (uses its own constant buffer)
+                DrawObject(context, _selectedModel);
+                _stencilSelectionRenderer.EndSelectedModelPass(context);
+            }
         }
 
         // ── Draw all scene models ────────────────────────────────────
         foreach (var sm in snapshot)
         {
-            if (sm == selectedModel && _stencilSelectionRenderer != null)
-            {
-                // ── Draw selected model with stencil stamping ──
-                _stencilSelectionRenderer.BeginSelectedModelPass(context);
-                // Upload world matrix via stencil renderer (uses its own constant buffer)
-                DrawObject(context, sm);
-                _stencilSelectionRenderer.EndSelectedModelPass(context);
-            }
-            else
-            {
-                // ── Draw normal model (no stencil write) ──
-                DrawObject(context, sm);
-            }
+            if (sm == selectedModel)
+                continue;
+            // ── Draw normal model (no stencil write) ──
+            DrawObject(context, sm);
         }
     }
 
@@ -406,9 +405,9 @@ public class Renderer : IDisposable
                 // This snapshot is valid for the entire frame and is used in both
                 // the shadow depth pass and the main scene pass.
                 var snapshot = _modelList.GetSnapshot();
-                
+
                 _shadowRenderer?.RenderDepthPass(context, snapshot);
-                
+
                 // ── Set viewport ───────────────────────────────────────────────
                 // D3D11 default viewport is (0,0,0,0) — zero size means the
                 // rasterizer clips every primitive away. Must set it every frame
@@ -423,8 +422,6 @@ public class Renderer : IDisposable
                 // ── Camera ─────────────────────────────────────────────────────
                 _camera.UpdateProjection(width, height);
 
-
-
                 // ═══════════════════════════════════════════════════════════════
                 //  MAIN SCENE PASS
                 //  Restore main targets and render with shadows applied.
@@ -436,8 +433,7 @@ public class Renderer : IDisposable
                 SetupMainScenePipeline(context);
                 DrawMainScene(context, snapshot);
 
-
-                                // ── Unbind shadow map resources (good practice before present) ──
+                // ── Unbind shadow map resources (good practice before present) ──
                 _shadowRenderer?.UnbindFromMainPass(context);
 
                 // ── Draw stencil selection overlay ─────────────────────────────
@@ -495,7 +491,7 @@ public class Renderer : IDisposable
         _renderLoopTask?.Wait(2000);
         _updateLoopTask?.Wait(2000);
 
-                _inputHandler.Dispose();
+        _inputHandler.Dispose();
         _modelList.Dispose();
         _grid?.Dispose();
         _worldMatrixBuffer?.Dispose();

@@ -24,7 +24,6 @@ namespace ModelViewer.Rendering;
 /// </summary>
 public class StencilSelectionRenderer : IDisposable
 {
-    private readonly Device _device;
     private readonly DeviceManager _deviceManager;
 
     // ── Stencil ID written to the stencil buffer for the selected model ──
@@ -50,7 +49,6 @@ public class StencilSelectionRenderer : IDisposable
     /// <param name="deviceManager">Provides stencil-write state, stencil SRV, point sampler.</param>
     public StencilSelectionRenderer(Device device, DeviceManager deviceManager)
     {
-        _device = device;
         _deviceManager = deviceManager;
 
         // ── Create world matrix constant buffer (cbuffer b2) ──
@@ -217,13 +215,9 @@ public class StencilSelectionRenderer : IDisposable
         // Restore default blend state
         context.OutputMerger.SetBlendState(null, null, 0xFFFFFFFF);
         
-        context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState, 0);
+        context.OutputMerger.SetDepthStencilState(_deviceManager.DepthStencilState);
     }
 
-    /// <summary>
-    /// Returns the stencil ID used for the selected model.
-    /// </summary>
-    public static byte StencilValue => StencilId;
 
     public void Dispose()
     {
