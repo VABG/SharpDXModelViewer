@@ -28,6 +28,19 @@ public class Renderer : IDisposable
     // ── Stencil selection pipeline (self-contained) ──
     private readonly StencilSelectionRenderer? _stencilSelectionRenderer;
 
+    // ── FXAA post-processing pipeline (self-contained) ──
+    private readonly FxaaRenderer? _fxaaRenderer;
+
+    /// <summary>
+    /// Gets or sets whether FXAA anti-aliasing is enabled.
+    /// Call from the UI thread; the change takes effect on the next frame.
+    /// </summary>
+    public bool FxaaEnabled
+    {
+        get => _fxaaRenderer?.Enabled ?? false;
+        set => _fxaaRenderer!.Enabled = value;
+    }
+
     // ── World matrix constant buffer (cbuffer b2, for main scene pass) ──
     private SharpDX.Direct3D11.Buffer? _worldMatrixBuffer;
 
@@ -119,6 +132,7 @@ public class Renderer : IDisposable
 
         _shadowRenderer = new ShadowRenderer(_deviceManager.Device, _directionalLightSettings);
         _stencilSelectionRenderer = new StencilSelectionRenderer(_deviceManager.Device, _deviceManager);
+        _fxaaRenderer = new FxaaRenderer(_deviceManager.Device, 1, 1); // Placeholder, resized on first valid frame
         // Create view-projection constant buffer (non-generic for SharpDX 4.2.0)
         // Holds two 4x4 matrices (View + Projection) = 128 bytes
         var cbDesc = new BufferDescription
@@ -332,6 +346,7 @@ public class Renderer : IDisposable
         {
             var (newWidth, newHeight) = _surface.ConsumePendingResize();
             _deviceManager.Resize(newWidth, newHeight);
+            _fxaaRenderer?.Resize(_deviceManager.Device, newWidth, newHeight);
         }
     }
 
@@ -392,6 +407,9 @@ public class Renderer : IDisposable
                     continue;
                 }
 
+                // ── Ensure FXAA target matches back buffer size ──
+                _fxaaRenderer?.Resize(device, width, height);
+
                 var depthStencilView = _deviceManager.DepthStencilView;
                 var renderTargetView = _deviceManager.RenderTargetView;
 
@@ -414,9 +432,14 @@ public class Renderer : IDisposable
                 // in case the swap chain was resized.
                 context.Rasterizer.SetViewport(0, 0, width, height);
 
+                // ── Determine render target (FXAA offscreen or back buffer) ──
+                var activeRenderTarget = _fxaaRenderer?.Enabled == true
+                    ? _fxaaRenderer.FxaaRenderTargetView ?? renderTargetView
+                    : renderTargetView;
+
                 // ── Clear ──────────────────────────────────────────────────────
-                context.OutputMerger.SetTargets(depthStencilView, renderTargetView);
-                context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
+                context.OutputMerger.SetTargets(depthStencilView, activeRenderTarget);
+                context.ClearRenderTargetView(activeRenderTarget, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
                 context.ClearDepthStencilView(depthStencilView, DepthStencilClearFlags.Depth, 1.0f, 0);
 
                 // ── Camera ─────────────────────────────────────────────────────
@@ -424,21 +447,32 @@ public class Renderer : IDisposable
 
                 // ═══════════════════════════════════════════════════════════════
                 //  MAIN SCENE PASS
-                //  Restore main targets and render with shadows applied.
+                //  Render to FXAA offscreen target (or back buffer if FXAA off).
                 // ═══════════════════════════════════════════════════════════════
 
                 context.Rasterizer.SetViewport(0, 0, width, height);
-                context.OutputMerger.SetTargets(depthStencilView, renderTargetView);
+                context.OutputMerger.SetTargets(depthStencilView, activeRenderTarget);
                 UploadViewProjection(context);
                 SetupMainScenePipeline(context);
                 DrawMainScene(context, snapshot);
 
-                // ── Unbind shadow map resources (good practice before present) ──
+                                // ── Unbind shadow map resources (good practice before present) ──
                 _shadowRenderer?.UnbindFromMainPass(context);
 
-                // ── Draw stencil selection overlay ─────────────────────────────
-                // Must be drawn after all scene geometry but before Present()
-                _stencilSelectionRenderer?.DrawOverlay(context);
+                                // ── Draw stencil selection overlay ─────────────────────────────
+                // Drawn to the active render target (FXAA offscreen or back buffer)
+                // so the highlight is included in the FXAA pass when enabled.
+                _stencilSelectionRenderer?.DrawOverlay(context, activeRenderTarget);
+
+                // ── FXAA post-processing pass ──────────────────────────────────
+                // Switch to the back buffer so FXAA renders to screen.
+                if (_fxaaRenderer?.Enabled == true)
+                {
+                    // Clear the back buffer before blitting the FXAA result
+                    context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
+                    context.OutputMerger.SetTargets(depthStencilView, renderTargetView);
+                    _fxaaRenderer?.RenderFxaaPass(context, width, height);
+                }
 
                 // ── Present ────────────────────────────────────────────────────
                 _surface.Present();
@@ -499,6 +533,7 @@ public class Renderer : IDisposable
         _viewProjectionBuffer?.Dispose();
         _shadowRenderer?.Dispose();
         _stencilSelectionRenderer?.Dispose();
+        _fxaaRenderer?.Dispose();
         _deviceManager.Dispose();
         _surface.Dispose();
     }

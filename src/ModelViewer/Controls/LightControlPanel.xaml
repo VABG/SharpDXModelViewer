@@ -161,6 +161,22 @@
                                 ToolTip="Pick ambient color" />
                     </DockPanel>
 
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!--  POST-PROCESSING                               -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <TextBlock Text="Post-Processing" Foreground="#999999" FontSize="10"
+                               FontWeight="SemiBold" Margin="5,4,5,0" />
+
+                    <!-- FXAA Toggle -->
+                    <CheckBox x:Name="FxaaCheckBox"
+                              Content="FXAA Anti-Aliasing"
+                              Foreground="#CCCCCC"
+                              FontSize="11"
+                              Margin="5,2,5,6"
+                              IsChecked="True"
+                              Checked="OnFxaaToggled"
+                              Unchecked="OnFxaaToggled" />
+
                 </StackPanel>
             </Grid>
         </DockPanel>

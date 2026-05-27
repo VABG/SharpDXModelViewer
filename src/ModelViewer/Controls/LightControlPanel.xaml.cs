@@ -26,11 +26,16 @@ internal partial class LightControlPanel
     /// </summary>
     public event Action<float, float, float>? ShadowParamsChanged;
 
-    /// <summary>
+        /// <summary>
     /// Fired whenever LightColor or AmbientColor changes.
     /// Carries (lightColor, ambientColor) as Vector4.
     /// </summary>
     public event Action<Vector4, Vector4>? LightColorsChanged;
+
+    /// <summary>
+    /// Fired whenever the FXAA toggle changes.
+    /// </summary>
+    public event Action<bool>? FxaaToggled;
 
     /// <summary>Whether the panel body is currently expanded.</summary>
     public bool IsExpanded
@@ -189,11 +194,17 @@ internal partial class LightControlPanel
     private void OnShadowText_LostFocus(object? sender, RoutedEventArgs e) =>
         OnShadowSlider_ValueChanged(null!, default!);
 
-    /// <summary>Shared KeyDown handler — commits on Enter.</summary>
+        /// <summary>Shared KeyDown handler — commits on Enter.</summary>
     private void OnShadowText_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
             OnShadowSlider_ValueChanged(null!, default!);
+    }
+
+    private void OnFxaaToggled(object? sender, RoutedEventArgs e)
+    {
+        if (FxaaCheckBox is not null)
+            FxaaToggled?.Invoke(FxaaCheckBox.IsChecked == true);
     }
 
     /// <summary>Reads a float from a shadow TextBox, returning 0 on parse failure.</summary>

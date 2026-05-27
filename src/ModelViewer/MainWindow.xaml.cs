@@ -42,10 +42,11 @@ public partial class MainWindow : Window
             var lightSettings = _mainVm.LightSettings;
             if (lightSettings is not null)
             {
-                LightPanel.Settings = lightSettings;
+                                LightPanel.Settings = lightSettings;
                 LightPanel.LightDirectionChanged += _mainVm.Renderer!.SetLightDirection;
                 LightPanel.ShadowParamsChanged += _mainVm.Renderer!.SetShadowParams;
                 LightPanel.LightColorsChanged += _mainVm.Renderer!.SetLightColors;
+                LightPanel.FxaaToggled += (enabled) => _mainVm.Renderer!.FxaaEnabled = enabled;
             }
         }
         catch (Exception ex)

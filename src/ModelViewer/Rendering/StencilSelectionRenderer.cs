@@ -166,7 +166,7 @@ public class StencilSelectionRenderer : IDisposable
         }
     }
 
-        /// <summary>
+                /// <summary>
     /// Draws a fullscreen overlay quad that highlights pixels where the stencil
     /// buffer matches the selected model's stencil ID.
     ///
@@ -175,12 +175,18 @@ public class StencilSelectionRenderer : IDisposable
     ///
     /// Call this just before Present(), after all scene geometry is drawn.
     /// </summary>
-    public void DrawOverlay(DeviceContext context)
+    /// <param name="context">The device context.</param>
+    /// <param name="renderTargetView">Optional render target. Defaults to the back buffer RTV.
+    /// Pass the FXAA offscreen RTV so the highlight is included in the FXAA pass.</param>
+    public void DrawOverlay(DeviceContext context, RenderTargetView? renderTargetView = null)
     {
+        // Use the provided RTV or fall back to the back buffer
+        var activeRtv = renderTargetView ?? _deviceManager.RenderTargetView;
+
         // Keep both RTV and DSV bound so the stencil test can read the stencil buffer
-        if (_deviceManager.RenderTargetView != null && _deviceManager.DepthStencilView != null)
+        if (activeRtv != null && _deviceManager.DepthStencilView != null)
         {
-            context.OutputMerger.SetTargets(_deviceManager.DepthStencilView, _deviceManager.RenderTargetView);
+            context.OutputMerger.SetTargets(_deviceManager.DepthStencilView, activeRtv);
         }
 
         // Switch to stencil-test state: only pass fragments where stencil == StencilId
