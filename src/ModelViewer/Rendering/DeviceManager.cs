@@ -15,7 +15,6 @@ public class DeviceManager : IDisposable
     private DepthStencilState? _stencilTestState;
     private DepthStencilView? _depthStencilView;
     private Texture2D? _depthStencilTexture;
-    private ShaderResourceView? _depthStencilSrv; // SRV for stencil sampling in outline shader
     private RasterizerState? _rasterizerState;
     private BlendState? _alphaBlendState; // For overlay rendering
 
@@ -61,8 +60,8 @@ public class DeviceManager : IDisposable
             Height = height,
             MipLevels = 1,
             ArraySize = 1,
-            Format = Format.R32G8X24_Typeless, // Typeless allows both DSV and SRV bindings
-            SampleDescription = new SampleDescription(1, 0), // No MSAA — required for SRV binding
+            Format = Format.R32G8X24_Typeless,
+            SampleDescription = new SampleDescription(1, 0),
             Usage = ResourceUsage.Default,
             BindFlags = BindFlags.DepthStencil | BindFlags.ShaderResource,
             CpuAccessFlags = CpuAccessFlags.None,
@@ -78,15 +77,6 @@ public class DeviceManager : IDisposable
             Texture2D = { MipSlice = 0 },
         };
         _depthStencilView = new DepthStencilView(Device, _depthStencilTexture, dsvDesc);
-
-        // ── Create SRV for stencil sampling (R32G8X24_UInt: .x=depth, .y=stencil) ──
-        var srvDesc = new ShaderResourceViewDescription
-        {
-            Format = Format.R32_Float_X8X24_Typeless, // .x = depth (R32), .y = stencil (G8)
-            Dimension = SharpDX.Direct3D.ShaderResourceViewDimension.Texture2D,
-            Texture2D = { MostDetailedMip = 0, MipLevels = 1 },
-        };
-        _depthStencilSrv = new ShaderResourceView(Device, _depthStencilTexture, srvDesc);
     }
 
     /// <summary>
@@ -211,10 +201,8 @@ public class DeviceManager : IDisposable
         _renderTargetView = null;
 
         _depthStencilView?.Dispose();
-        _depthStencilSrv?.Dispose();
         _depthStencilTexture?.Dispose();
         _depthStencilView = null;
-        _depthStencilSrv = null;
         _depthStencilTexture = null;
 
         // 3. Resize the swap chain — safe now because no live references remain
@@ -228,7 +216,6 @@ public class DeviceManager : IDisposable
     {
         if (_disposed) return;
         _alphaBlendState?.Dispose();
-        _depthStencilSrv?.Dispose();
         _stencilWriteState?.Dispose();
         _stencilTestState?.Dispose();
         _depthStencilState?.Dispose();
