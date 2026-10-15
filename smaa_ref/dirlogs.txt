@@ -1,0 +1,6 @@
+build.log
+build2.log
+build3.log
+exitcode.log
+probe.log
+run_foreground.log

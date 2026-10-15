@@ -28,6 +28,9 @@ public class Renderer : IDisposable
     // ── Stencil selection pipeline (self-contained) ──
     private readonly StencilSelectionRenderer? _stencilSelectionRenderer;
 
+    // ── SMAA post-processing pipeline (self-contained) ──
+    private readonly SMAARenderer? _smaaRenderer;
+
     // ── World matrix constant buffer (cbuffer b2, for main scene pass) ──
     private SharpDX.Direct3D11.Buffer? _worldMatrixBuffer;
 
@@ -93,6 +96,21 @@ public class Renderer : IDisposable
         _directionalLightSettings.AmbientColor = ambientColor;
     }
 
+    /// <summary>
+    /// Turns SMAA subpixel morphological antialiasing on or off.
+    /// Call from the UI thread; the change takes effect on the next frame.
+    /// </summary>
+    public void SetAntiAliasingEnabled(bool enabled)
+    {
+        _smaaRenderer?.SetEnabled(enabled);
+    }
+
+    /// <summary>
+    /// Whether SMAA antialiasing is currently active in the post-processing pipeline.
+    /// Exposed so the ViewModel / UI can read back the renderer's state.
+    /// </summary>
+    public bool AntiAliasingEnabled => _smaaRenderer?.Enabled ?? false;
+
     private readonly Stopwatch _fpsWatch = new();
 
     /// <summary>
@@ -108,6 +126,7 @@ public class Renderer : IDisposable
     /// </summary>
     public Renderer(D3DRenderSurface surface)
     {
+        RenderDiag("Renderer ctor entered\n");
         _surface = surface;
         _deviceManager = new DeviceManager(surface);
         _camera = new Camera();
@@ -119,6 +138,7 @@ public class Renderer : IDisposable
 
         _shadowRenderer = new ShadowRenderer(_deviceManager.Device, _directionalLightSettings);
         _stencilSelectionRenderer = new StencilSelectionRenderer(_deviceManager.Device, _deviceManager);
+        _smaaRenderer = new SMAARenderer(_deviceManager.Device);
         // Create view-projection constant buffer (non-generic for SharpDX 4.2.0)
         // Holds two 4x4 matrices (View + Projection) = 128 bytes
         var cbDesc = new BufferDescription
@@ -152,6 +172,7 @@ public class Renderer : IDisposable
 
     private void StartRenderLoop()
     {
+        RenderDiag("StartRenderLoop entered\n");
         _fpsWatch.Restart();
         _renderLoopTask = Task.Run(() => RenderLoop(_cts.Token));
     }
@@ -362,6 +383,35 @@ public class Renderer : IDisposable
         }
     }
 
+    // ── TEMPORARY DIAGNOSTIC: file-based logging for the render thread ──
+    private bool _diagFrameLogged;
+    private bool _diagApplyLogged;
+    private int _diagLoopCount;
+
+    private void RenderDiagOnce(int width, int height, bool smaaActive)
+    {
+        if (_diagFrameLogged) return;
+        _diagFrameLogged = true;
+        try
+        {
+            System.IO.File.AppendAllText(
+                @"c:\Users\VABG\source\repos\SharpDXModelViewer\smaa_ref\renderlog.txt",
+                $"frame reached: {width}x{height} smaaActive={smaaActive}\n");
+        }
+        catch { }
+    }
+
+    private static void RenderDiag(string text)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(
+                @"c:\Users\VABG\source\repos\SharpDXModelViewer\smaa_ref\renderlog.txt",
+                text);
+        }
+        catch { }
+    }
+
     private void RenderLoop(CancellationToken token)
     {
         var device = _deviceManager.Device;
@@ -384,6 +434,12 @@ public class Renderer : IDisposable
                 var (width, height) = GetBackBufferDimensions();
 
                 // Wait until WPF layout has resized the swap chain to a real size.
+                // TEMPORARY DIAGNOSTIC: log the first few frames' back-buffer
+                // size so a stuck 1x1 swap chain is visible.
+                _diagLoopCount++;
+                if (_diagLoopCount <= 3)
+                    RenderDiag($"loop iter {_diagLoopCount}: backbuffer {width}x{height}\n");
+
                 // The initial window is 1×1; ArrangeOverride will resize it once
                 // WPF layout runs (which happens after MainWindow_Loaded returns).
                 if (width <= 1 || height <= 1)
@@ -401,6 +457,21 @@ public class Renderer : IDisposable
                     continue;
                 }
 
+                // ── SMAA: the scene needs an offscreen target ───────────────
+                // The resolve pass samples the scene image, so the scene is
+                // drawn into an offscreen RGBA8 target when SMAA is active.
+                // PrepareSceneTargets also (re)allocates it on resize and
+                // reports whether SMAA should run this frame.
+                var smaaSceneTarget = _smaaRenderer?.PrepareSceneTargets(width, height) == true
+                    ? _smaaRenderer!.SceneRenderTargetView
+                    : null;
+                var smaaActive = smaaSceneTarget != null;
+                var sceneRenderTargetView = smaaSceneTarget ?? renderTargetView;
+
+                // TEMPORARY DIAGNOSTIC: confirm the frame actually reached the
+                // SMAA branch and that the swap chain has a real size.
+                RenderDiagOnce(width, height, smaaActive);
+
                 // ── Take a thread-safe snapshot of scene models ──
                 // This snapshot is valid for the entire frame and is used in both
                 // the shadow depth pass and the main scene pass.
@@ -415,8 +486,8 @@ public class Renderer : IDisposable
                 context.Rasterizer.SetViewport(0, 0, width, height);
 
                 // ── Clear ──────────────────────────────────────────────────────
-                context.OutputMerger.SetTargets(depthStencilView, renderTargetView);
-                context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
+                context.OutputMerger.SetTargets(depthStencilView, sceneRenderTargetView);
+                context.ClearRenderTargetView(sceneRenderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
                 context.ClearDepthStencilView(depthStencilView, DepthStencilClearFlags.Depth, 1.0f, 0);
 
                 // ── Camera ─────────────────────────────────────────────────────
@@ -428,13 +499,24 @@ public class Renderer : IDisposable
                 // ═══════════════════════════════════════════════════════════════
 
                 context.Rasterizer.SetViewport(0, 0, width, height);
-                context.OutputMerger.SetTargets(depthStencilView, renderTargetView);
+                context.OutputMerger.SetTargets(depthStencilView, sceneRenderTargetView);
                 UploadViewProjection(context);
                 SetupMainScenePipeline(context);
                 DrawMainScene(context, snapshot);
 
                 // ── Unbind shadow map resources (good practice before present) ──
                 _shadowRenderer?.UnbindFromMainPass(context);
+
+                // ── SMAA resolve ───────────────────────────────────────────────
+                // Reads the offscreen scene + blend weights and writes the
+                // antialiased image straight into the back buffer.
+                if (smaaActive)
+                    _smaaRenderer!.Apply(context, renderTargetView);
+                if (_diagFrameLogged && _diagApplyLogged == false)
+                {
+                    _diagApplyLogged = true;
+                    RenderDiag("apply returned normally\n");
+                }
 
                 // ── Draw stencil selection overlay ─────────────────────────────
                 // Must be drawn after all scene geometry but before Present()
@@ -453,7 +535,13 @@ public class Renderer : IDisposable
             }
             catch (SharpDXException ex)
             {
+                RenderDiag($"RENDER FAIL hr={ex.HResult} {ex.Message}\n");
                 Debug.WriteLine($"Render error: {ex.Message}");
+                Thread.Sleep(16);
+            }
+            catch (Exception ex)
+            {
+                RenderDiag($"RENDER FAIL (non-D3D) {ex.GetType()}: {ex.Message}\n");
                 Thread.Sleep(16);
             }
         }
@@ -499,6 +587,7 @@ public class Renderer : IDisposable
         _viewProjectionBuffer?.Dispose();
         _shadowRenderer?.Dispose();
         _stencilSelectionRenderer?.Dispose();
+        _smaaRenderer?.Dispose();
         _deviceManager.Dispose();
         _surface.Dispose();
     }

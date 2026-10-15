@@ -1,0 +1,10 @@
+using System;
+var p = Marshal.AllocHGlobal(64);
+var a = new int[4] { 7, 8, 9, 10 };
+Marshal.Copy(p, 0, a, 0, 4);
+System.Console.WriteLine("copy-intptr-dest: " + Marshal.ReadInt32(p, 8));
+Marshal.Store(p, 12, (int)42);
+System.Console.WriteLine("store: " + Marshal.Load<int>(p, 12));
+Marshal.WriteInt32(p, 16, 99);
+System.Console.WriteLine("writeint32: " + Marshal.Load<int>(p, 16));
+Marshal.FreeHGlobal(p);

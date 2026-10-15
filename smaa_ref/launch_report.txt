@@ -1,0 +1,9 @@
+﻿launched pid=3912
+t=1s alive, cpu=0.671875
+t=2s alive, cpu=0.84375
+t=3s alive, cpu=0.90625
+t=4s alive, cpu=0.953125
+t=5s alive, cpu=1
+t=6s alive, cpu=1.015625
+t=7s alive, cpu=1.03125
+FINAL: still alive after 7s (SMAA path ran without exiting)

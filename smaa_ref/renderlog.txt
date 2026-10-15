@@ -1,0 +1,320 @@
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941
+App.OnStartup
+MainWindow ctor
+MainWindow_Loaded entered
+Renderer ctor entered
+StartRenderLoop entered
+loop iter 1: backbuffer 256x256
+frame reached: 256x256 smaaActive=True
+apply returned normally
+loop iter 2: backbuffer 999x941
+loop iter 3: backbuffer 999x941

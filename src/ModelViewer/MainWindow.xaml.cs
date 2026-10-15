@@ -14,6 +14,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        try { System.IO.File.AppendAllText(@"c:\Users\VABG\source\repos\SharpDXModelViewer\smaa_ref\renderlog.txt", "MainWindow ctor\n"); } catch { }
         InitializeComponent();
 
         _mainVm = new MainViewModel();
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
     {
         try
         {
+            try { System.IO.File.AppendAllText(@"c:\Users\VABG\source\repos\SharpDXModelViewer\smaa_ref\renderlog.txt", "MainWindow_Loaded entered\n"); } catch { }
             // Create and attach the D3D rendering surface
             var surface = new Rendering.D3DRenderSurface();
             RenderHost.Content = surface;
@@ -50,6 +52,13 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    @"c:\Users\VABG\source\repos\SharpDXModelViewer\smaa_ref\renderlog.txt",
+                    $"INIT FAIL {ex.GetType()}: {ex.Message}\n");
+            }
+            catch { }
             MessageBox.Show($"Failed to initialize renderer: {ex.Message}", "Error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             Close();

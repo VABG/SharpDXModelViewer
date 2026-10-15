@@ -1,0 +1,10 @@
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(2,9): error CS0103: The name 'Marshal' does not exist in the current context
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(4,1): error CS0103: The name 'Marshal' does not exist in the current context
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(5,49): error CS0103: The name 'Marshal' does not exist in the current context
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(6,1): error CS0103: The name 'Marshal' does not exist in the current context
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(7,38): error CS0103: The name 'Marshal' does not exist in the current context
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(8,1): error CS0103: The name 'Marshal' does not exist in the current context
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(9,43): error CS0103: The name 'Marshal' does not exist in the current context
+c:\Users\VABG\source\repos\SharpDXModelViewer\_marshal_probe.cs(10,1): error CS0103: The name 'Marshal' does not exist in the current context
+
+The build failed. Fix the build errors and run again.

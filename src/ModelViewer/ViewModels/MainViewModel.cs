@@ -21,6 +21,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public Renderer? Renderer => _renderer;
 
+    // ── SMAA post-processing toggle ──────────────────────────────────
+
+    /// <summary>
+    /// Whether SMAA subpixel morphological antialiasing is active.
+    /// Mirrors <see cref="Rendering.SMAARenderer.Enabled"/>; every change is
+    /// pushed to the renderer and takes effect on the next frame.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SmaaLabel))]
+    private bool _smaaEnabled = true;
+
+    /// <summary>Human-readable SMAA state for the UI readout.</summary>
+    public string SmaaLabel => _smaaEnabled ? "On" : "Off";
+
     // ── Child ViewModels ─────────────────────────────────────────────
 
     public StatusBarViewModel StatusBarVm { get; }
@@ -53,6 +67,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         // FPS updates flow through the StatusBar ViewModel
         _renderer.OnFpsChanged = fps => { StatusBarVm.FpsText = $"FPS: {fps}"; };
+
+        // Mirror the renderer's SMAA default so the UI starts in sync
+        SmaaEnabled = _renderer?.AntiAliasingEnabled ?? true;
 
         // Now that the renderer exists, create the ScenePanel ViewModel
         ScenePanelVm = new SceneModelPanelViewModel(_renderer.ModelList.ModelsCollection);
@@ -105,12 +122,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
         });
     }
 
+    // ── Sync ViewModel → renderer ────────────────────────────────────
+
+    /// <summary>
+    /// Pushes the SMAA state into the renderer's post-processing pipeline.
+    /// </summary>
+    partial void OnSmaaEnabledChanged(bool value) => _renderer?.SetAntiAliasingEnabled(value);
+
     // ── Commands ─────────────────────────────────────────────────────
 
     [RelayCommand]
     private void ResetCamera()
     {
         _renderer?.ResetCamera();
+    }
+
+    /// <summary>Turns SMAA antialiasing on or off (takes effect next frame).</summary>
+    [RelayCommand]
+    private void ToggleSmaa()
+    {
+        SmaaEnabled = !SmaaEnabled;
     }
 
     [RelayCommand]

@@ -31,6 +31,7 @@
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="_Reset Camera" Command="{Binding ResetCameraCommand}" />
+                <MenuItem Header="_Toggle SMAA" Command="{Binding ToggleSmaaCommand}" />
             </MenuItem>
         </Menu>
 
@@ -55,6 +56,26 @@
                                             DockPanel.Dock="Top"
                                             Margin="0,4,0,0"
                                             Height="Auto" />
+
+                <!-- Render settings (SMAA antialiasing toggle) -->
+                <Border DockPanel.Dock="Top" Margin="0,4,0,0" Padding="6,4"
+                        Background="#2D2D30" BorderBrush="#3F3F46" BorderThickness="1"
+                        CornerRadius="4">
+                    <StackPanel>
+                        <TextBlock Text="Render Settings" Foreground="White"
+                                   FontWeight="SemiBold" FontSize="12" />
+                        <DockPanel>
+                            <Button Content="{Binding SmaaLabel, Mode=OneWay}"
+                                    Command="{Binding ToggleSmaaCommand}"
+                                    DockPanel.Dock="Right"
+                                    HorizontalAlignment="Right"
+                                    Width="46" Height="20" FontSize="10" Padding="4,2"
+                                    ToolTip="Toggle SMAA antialiasing" />
+                            <TextBlock Text="SMAA" Foreground="#CCCCCC" FontSize="11"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
             </DockPanel>
 
             <!-- Left GridSplitter -->

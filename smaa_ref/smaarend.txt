@@ -1,0 +1,686 @@
+using System.IO;
+using System.Runtime.InteropServices;
+using SharpDX;
+using SharpDX.Direct3D11;
+using SharpDX.DXGI;
+using SharpDX.D3DCompiler;
+using Buffer = SharpDX.Direct3D11.Buffer;
+using MapFlags = SharpDX.Direct3D11.MapFlags;
+using Device = SharpDX.Direct3D11.Device;
+
+namespace ModelViewer.Rendering;
+
+/// <summary>
+/// Subpixel Morphological Antialiasing (SMAA 1x) post-processing pipeline.
+///
+/// The scene is drawn into an offscreen target and then resolved through three
+/// fullscreen passes (see the reference 'SMAA.hlsl' / 'SMAA.cpp' pair):
+///
+///   1. Edge detection        →  edges RT  (.rg = horizontal / vertical edges)
+///   2. Blend weight calc.    →  blend  RT  (.rg = horizontal weights,
+///                                          .ba = vertical weights)
+///   3. Neighborhood blending →  the swap chain back buffer
+///
+/// Renderer.cs drives the pipeline with PrepareSceneTargets() before the main
+/// scene pass and Apply() after it.  When SMAA is disabled PrepareSceneTargets
+/// returns false and the scene keeps rendering straight into the back buffer,
+/// exactly as it did before this pass was added.
+///
+/// The three passes are thin HLSL wrappers around 'SMAA.hlsl'
+/// (VertexShaderSMAA*.hlsl / PixelShaderSMAA*.hlsl).  The reference header
+/// cannot infer SMAA_RT_METRICS on its own, so it is bound to the 'SMAAConstants'
+/// cbuffer (slot b0) that this class uploads every frame.
+/// </summary>
+public class SMAARenderer : IDisposable
+{
+    private readonly Device _device;
+
+    // ── Offscreen scene target (the image that gets resolved) ──
+    private Texture2D? _sceneTexture;
+    private RenderTargetView? _sceneRenderTargetView;
+    private ShaderResourceView? _sceneSrv;
+
+    // ── Edge detection target ──
+    private Texture2D? _edgesTexture;
+    private RenderTargetView? _edgesRenderTargetView;
+    private ShaderResourceView? _edgesSrv;
+
+    // ── Blend weight target ──
+    private Texture2D? _blendTexture;
+    private RenderTargetView? _blendRenderTargetView;
+    private ShaderResourceView? _blendSrv;
+
+    // ── SMAA lookup tables (DDS assets shipped in the Shaders folder) ──
+    private Texture2D? _areaTexture;
+    private ShaderResourceView? _areaSrv;
+    private Texture2D? _searchTexture;
+    private ShaderResourceView? _searchSrv;
+
+    // ── Pass 1: edge detection ──
+    private readonly VertexShader _edgeVertexShader;
+    private readonly PixelShader _edgePixelShader;
+    private readonly InputLayout _edgeInputLayout;
+
+    // ── Pass 2: blending weight calculation ──
+    private readonly VertexShader _weightsVertexShader;
+    private readonly PixelShader _weightsPixelShader;
+    private readonly InputLayout _weightsInputLayout;
+
+    // ── Pass 3: neighborhood blending (resolve) ──
+    private readonly VertexShader _resolveVertexShader;
+    private readonly PixelShader _resolvePixelShader;
+    private readonly InputLayout _resolveInputLayout;
+
+    // ── Fullscreen quad (same geometry as the stencil overlay pass) ──
+    private readonly Buffer _quadVertexBuffer;
+    private readonly Buffer _quadIndexBuffer;
+    private const int QuadIndexCount = 6; // 2 triangles, triangle list
+
+    // ── Screen-space passes must not touch depth/stencil ──
+    private readonly DepthStencilState _passthroughDepthState;
+
+    // ── SMAA_RT_METRICS (cbuffer b0, shared by all three passes) ──
+    private readonly Buffer _constantsBuffer;
+
+    // ── TEMPORARY DIAGNOSTIC: staging copy of a screen target for CPU readback ──
+    private Texture2D? _stagingTexture;
+    private bool _diagDump = true;
+
+    private int _width;
+    private int _height;
+    private bool _enabled = true;
+    private bool _disposed;
+
+    /// <summary>
+    /// Offscreen render target the main scene pass must draw into.
+    /// Null when SMAA is disabled or the targets have not been allocated yet —
+    /// in that case Renderer falls back to the back buffer.
+    /// </summary>
+    public RenderTargetView? SceneRenderTargetView => _sceneRenderTargetView;
+
+    /// <summary>
+    /// Whether the SMAA pipeline is active.
+    /// </summary>
+    public bool Enabled => _enabled;
+
+    /// <summary>
+    /// Turns SMAA on or off. Call from the UI thread; takes effect next frame.
+    /// </summary>
+    public void SetEnabled(bool enabled)
+    {
+        _enabled = enabled;
+    }
+
+    /// <summary>
+    /// Allocates the SMAA pipeline: shaders, fullscreen quad, lookup tables and
+    /// the RT-metrics constant buffer.  Screen-sized targets are created lazily
+    /// by PrepareSceneTargets() because the window starts out at 1x1.
+    /// </summary>
+    public SMAARenderer(Device device)
+    {
+        _device = device;
+
+        // ── Compile the three passes (entry points follow project convention) ──
+        var (edgeVs, edgeSignature) = ShaderCompiler.CompileVertexShader(
+            device, ShaderCompiler.ResolveShaderPath("VertexShaderSMAAEdge.hlsl"));
+        _edgeVertexShader = edgeVs;
+        _edgePixelShader = ShaderCompiler.CompilePixelShader(
+            device, ShaderCompiler.ResolveShaderPath("PixelShaderSMAAEdge.hlsl"));
+        _edgeInputLayout = CreateQuadInputLayout(device, edgeSignature);
+        edgeSignature.Dispose();
+
+        var (weightsVs, weightsSignature) = ShaderCompiler.CompileVertexShader(
+            device, ShaderCompiler.ResolveShaderPath("VertexShaderSMAAWeights.hlsl"));
+        _weightsVertexShader = weightsVs;
+        _weightsPixelShader = ShaderCompiler.CompilePixelShader(
+            device, ShaderCompiler.ResolveShaderPath("PixelShaderSMAAWeights.hlsl"));
+        _weightsInputLayout = CreateQuadInputLayout(device, weightsSignature);
+        weightsSignature.Dispose();
+
+        var (resolveVs, resolveSignature) = ShaderCompiler.CompileVertexShader(
+            device, ShaderCompiler.ResolveShaderPath("VertexShaderSMAAResolve.hlsl"));
+        _resolveVertexShader = resolveVs;
+        _resolvePixelShader = ShaderCompiler.CompilePixelShader(
+            device, ShaderCompiler.ResolveShaderPath("PixelShaderSMAAResolve.hlsl"));
+        _resolveInputLayout = CreateQuadInputLayout(device, resolveSignature);
+        resolveSignature.Dispose();
+        // ── Fullscreen quad in NDC space (two triangles, same winding as the
+        //    stencil overlay pass so the project's rasterizer state keeps them) ──
+        var quadVertices = new[]
+        {
+            new Vector4(-1.0f, -1.0f, 0.0f, 1.0f), // 0: bottom-left
+            new Vector4(-1.0f,  1.0f, 0.0f, 1.0f), // 1: top-left
+            new Vector4( 1.0f,  1.0f, 0.0f, 1.0f), // 2: top-right
+            new Vector4(-1.0f, -1.0f, 0.0f, 1.0f), // 3: bottom-left (duplicate)
+            new Vector4( 1.0f,  1.0f, 0.0f, 1.0f), // 4: top-right (duplicate)
+            new Vector4( 1.0f, -1.0f, 0.0f, 1.0f), // 5: bottom-right
+        };
+
+        var vbDesc = new BufferDescription
+        {
+            SizeInBytes = quadVertices.Length * Marshal.SizeOf<Vector4>(),
+            Usage = ResourceUsage.Immutable,
+            BindFlags = BindFlags.VertexBuffer,
+            CpuAccessFlags = CpuAccessFlags.None,
+            OptionFlags = ResourceOptionFlags.None,
+        };
+
+        var vbPtr = Marshal.AllocCoTaskMem(vbDesc.SizeInBytes);
+        for (int i = 0; i < quadVertices.Length; i++)
+            Marshal.StructureToPtr(quadVertices[i],
+                IntPtr.Add(vbPtr, i * Marshal.SizeOf<Vector4>()), false);
+
+        using var vbStream = new DataStream(vbPtr, vbDesc.SizeInBytes, false, false);
+        _quadVertexBuffer = new Buffer(device, vbStream, vbDesc);
+        Marshal.FreeCoTaskMem(vbPtr);
+
+        var indices = new[] { 0, 2, 1, 3, 5, 4 };
+        var ibDesc = new BufferDescription
+        {
+            SizeInBytes = indices.Length * sizeof(int),
+            Usage = ResourceUsage.Immutable,
+            BindFlags = BindFlags.IndexBuffer,
+            CpuAccessFlags = CpuAccessFlags.None,
+            OptionFlags = ResourceOptionFlags.None,
+        };
+        var ibPtr = Marshal.AllocCoTaskMem(ibDesc.SizeInBytes);
+        for (int i = 0; i < indices.Length; i++)
+            Marshal.WriteInt32(ibPtr, i * sizeof(int), indices[i]);
+
+        using var ibStream = new DataStream(ibPtr, ibDesc.SizeInBytes, false, false);
+        _quadIndexBuffer = new Buffer(device, ibStream, ibDesc);
+        Marshal.FreeCoTaskMem(ibPtr);
+
+        // ── SMAA lookup tables ──
+        // AreaTexDX9.dds is 160x560 R8G8_UNORM and SearchTex.dds is 64x16 R8_UNORM.
+        // Both DDS files already store their pixels in the DXGI-native layout, so
+        // LoadDdsTexture only has to validate the header and skip 128 bytes.
+        (_areaTexture, _areaSrv) = LoadDdsTexture(device,
+            ShaderCompiler.ResolveShaderPath("AreaTexDX9.dds"), 160, 560, 2,
+            Format.R8G8_UNorm);
+        (_searchTexture, _searchSrv) = LoadDdsTexture(device,
+            ShaderCompiler.ResolveShaderPath("SearchTex.dds"), 64, 16, 1,
+            Format.R8_UNorm);
+
+        // ── SMAA_RT_METRICS constant buffer (one float4 = 16 bytes, slot b0) ──
+        var cbDesc = new BufferDescription
+        {
+            SizeInBytes = Marshal.SizeOf<Vector4>(),
+            Usage = ResourceUsage.Dynamic,
+            BindFlags = BindFlags.ConstantBuffer,
+            CpuAccessFlags = CpuAccessFlags.Write,
+            OptionFlags = ResourceOptionFlags.None,
+        };
+        _constantsBuffer = new Buffer(device, cbDesc);
+
+        // ── Depth/stencil state that leaves both untouched ──
+        // The fullscreen quad sits at NDC z = 0 (window depth 0.5), which would
+        // lose a Less depth test against the scene depth buffer — so depth has
+        // to be explicitly disabled for all three SMAA passes.
+        var passthroughDesc = new DepthStencilStateDescription
+        {
+            IsDepthEnabled = false,
+            DepthWriteMask = DepthWriteMask.Zero,
+            IsStencilEnabled = false,
+            StencilWriteMask = 0,
+        };
+        _passthroughDepthState = new DepthStencilState(device, passthroughDesc);
+    }
+
+    /// <summary>
+    /// Allocates (or re-allocates) the screen-sized targets for the given
+    /// back-buffer size and reports whether SMAA should be used this frame.
+    /// Call before the main scene pass, then read SceneRenderTargetView.
+    /// </summary>
+    public bool PrepareSceneTargets(int width, int height)
+    {
+        if (!_enabled || width <= 1 || height <= 1)
+            return false;
+
+        if (_sceneRenderTargetView != null && _width == width && _height == height)
+            return true;
+
+        ReleaseScreenTargets();
+        CreateScreenTargets(width, height);
+        return true;
+    }
+
+    /// <summary>
+    /// Runs the three SMAA passes and writes the resolved image into the back
+    /// buffer. Call after the main scene pass, before Present().
+    /// </summary>
+    public void Apply(DeviceContext context, RenderTargetView backBufferRenderTargetView)
+    {
+        if (_sceneRenderTargetView == null || backBufferRenderTargetView == null)
+            return;
+
+        UploadRtMetrics(context);
+
+        if (_diagDump) DiagDump(context, _sceneTexture, "1-scene");
+
+        // ── Shared state for all three fullscreen draws ──
+        // No samplers are bound here: SMAA.hlsl declares its own inline sampler
+        // states ("SamplerState LinearSampler { ... }" / "PointSampler", lines
+        // 541-542 of the SMAA_HLSL_4 block), which the compiler bakes into the
+        // shader bytecode.  App-bound sampler states would be redundant.
+        context.Rasterizer.SetViewport(0, 0, _width, _height);
+        context.OutputMerger.SetBlendState(null, null, 0xFFFFFFFF);
+        context.OutputMerger.SetDepthStencilState(_passthroughDepthState, 0);
+
+        context.InputAssembler.PrimitiveTopology =
+            SharpDX.Direct3D.PrimitiveTopology.TriangleList;
+        var stride = Marshal.SizeOf<Vector4>();
+        context.InputAssembler.SetVertexBuffers(0,
+            new VertexBufferBinding(_quadVertexBuffer, stride, 0));
+        context.InputAssembler.SetIndexBuffer(_quadIndexBuffer, Format.R32_UInt, 0);
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  PASS 1 — edge detection (scene → edges RT, .rg = H/V edges)
+        // ═══════════════════════════════════════════════════════════════════
+        context.InputAssembler.InputLayout = _edgeInputLayout;
+        context.VertexShader.Set(_edgeVertexShader);
+        context.PixelShader.Set(_edgePixelShader);
+        context.VertexShader.SetConstantBuffer(0, _constantsBuffer);
+        context.PixelShader.SetConstantBuffer(0, _constantsBuffer);
+
+        context.PixelShader.SetShaderResource(0, _sceneSrv);
+        context.OutputMerger.SetTargets(_edgesRenderTargetView);
+        context.DrawIndexed(QuadIndexCount, 0, 0);
+        if (_diagDump) DiagDump(context, _edgesTexture, "2-edges");
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  PASS 2 — blending weights (edges + area + search → blend RT)
+        //  .rg = horizontal weights, .ba = vertical weights
+        // ═══════════════════════════════════════════════════════════════════
+        context.InputAssembler.InputLayout = _weightsInputLayout;
+        context.VertexShader.Set(_weightsVertexShader);
+        context.PixelShader.Set(_weightsPixelShader);
+        context.VertexShader.SetConstantBuffer(0, _constantsBuffer);
+        context.PixelShader.SetConstantBuffer(0, _constantsBuffer);
+
+        context.PixelShader.SetShaderResource(0, _edgesSrv);
+        context.PixelShader.SetShaderResource(1, _areaSrv);
+        context.PixelShader.SetShaderResource(2, _searchSrv);
+        context.OutputMerger.SetTargets(_blendRenderTargetView);
+        context.DrawIndexed(QuadIndexCount, 0, 0);
+        if (_diagDump) DiagDump(context, _blendTexture, "3-blend");
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  PASS 3 — neighborhood blending (scene + blend → back buffer)
+        // ═══════════════════════════════════════════════════════════════════
+        context.InputAssembler.InputLayout = _resolveInputLayout;
+        context.VertexShader.Set(_resolveVertexShader);
+        context.PixelShader.Set(_resolvePixelShader);
+        context.VertexShader.SetConstantBuffer(0, _constantsBuffer);
+        context.PixelShader.SetConstantBuffer(0, _constantsBuffer);
+
+        context.PixelShader.SetShaderResource(0, _sceneSrv);
+        context.PixelShader.SetShaderResource(1, _blendSrv);
+        // t2 is unused by the resolve shader — clear it so the previous pass'
+        // search-table binding cannot be sampled by accident.
+        context.PixelShader.SetShaderResource(2, null);
+        context.OutputMerger.SetTargets(backBufferRenderTargetView);
+        context.DrawIndexed(QuadIndexCount, 0, 0);
+        if (_diagDump)
+        {
+            Diag("=== end of first-frame dump ===\n");
+            _diagDump = false;
+        }
+    }
+
+    /// <summary>
+    /// Creates the three screen-sized targets (scene, edges, blend weights).
+    /// All are RGBA8: the reference implementation (SMAA.cpp) uses
+    /// R8G8B8A8 for both intermediate targets and the scene copy, and the
+    /// resolve/edge shaders only ever write .rg / .rgba of it.
+    /// </summary>
+    private void CreateScreenTargets(int width, int height)
+    {
+        _width = width;
+        _height = height;
+
+        _sceneTexture = CreateScreenTexture(Format.R8G8B8A8_UNorm);
+        _sceneRenderTargetView = new RenderTargetView(_device, _sceneTexture);
+        _sceneSrv = new ShaderResourceView(_device, _sceneTexture);
+
+        _edgesTexture = CreateScreenTexture(Format.R8G8B8A8_UNorm);
+        _edgesRenderTargetView = new RenderTargetView(_device, _edgesTexture);
+        _edgesSrv = new ShaderResourceView(_device, _edgesTexture);
+
+        _blendTexture = CreateScreenTexture(Format.R8G8B8A8_UNorm);
+        _blendRenderTargetView = new RenderTargetView(_device, _blendTexture);
+        _blendSrv = new ShaderResourceView(_device, _blendTexture);
+
+        // TEMPORARY DIAGNOSTIC: CPU-readable staging copy (BindFlags.None is
+        // required — D3D rejects CPU access flags on a resource that has bind
+        // flags, which is why mapping the render targets directly failed).
+        var stagingDesc = new Texture2DDescription
+        {
+            Width = _width,
+            Height = _height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = Format.R8G8B8A8_UNorm,
+            SampleDescription = new SampleDescription(1, 0),
+            Usage = ResourceUsage.Staging,
+            BindFlags = BindFlags.None,
+            CpuAccessFlags = CpuAccessFlags.Read,
+            OptionFlags = ResourceOptionFlags.None,
+        };
+        _stagingTexture = new Texture2D(_device, stagingDesc);
+    }
+
+    /// <summary>
+    /// One screen-sized RGBA8 texture usable as both RTV and SRV.
+    /// </summary>
+    private Texture2D CreateScreenTexture(Format dxgiFormat)
+    {
+        var desc = new Texture2DDescription
+        {
+            Width = _width,
+            Height = _height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = dxgiFormat,
+            SampleDescription = new SampleDescription(1, 0),
+            Usage = ResourceUsage.Default,
+            BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+            CpuAccessFlags = CpuAccessFlags.None,
+            OptionFlags = ResourceOptionFlags.None,
+        };
+        return new Texture2D(_device, desc);
+    }
+
+    /// <summary>
+    /// Releases the screen-sized targets (views first — they reference the
+    /// underlying textures). Used on resize and on Dispose().
+    /// </summary>
+    private void ReleaseScreenTargets()
+    {
+        _stagingTexture?.Dispose();
+        _stagingTexture = null;
+
+        _blendSrv?.Dispose();
+        _blendRenderTargetView?.Dispose();
+        _blendTexture?.Dispose();
+        _blendSrv = null;
+        _blendRenderTargetView = null;
+        _blendTexture = null;
+
+        _edgesSrv?.Dispose();
+        _edgesRenderTargetView?.Dispose();
+        _edgesTexture?.Dispose();
+        _edgesSrv = null;
+        _edgesRenderTargetView = null;
+        _edgesTexture = null;
+
+        _sceneSrv?.Dispose();
+        _sceneRenderTargetView?.Dispose();
+        _sceneTexture?.Dispose();
+        _sceneSrv = null;
+        _sceneRenderTargetView = null;
+        _sceneTexture = null;
+    }
+
+    /// <summary>
+    /// TEMPORARY DIAGNOSTIC: copies a GPU texture to the staging resource and
+    /// writes a text summary + ASCII luminance preview to diag.log.
+    /// </summary>
+    private void DiagDump(DeviceContext context, Texture2D? source, string name)
+    {
+        if (source == null || _stagingTexture == null) return;
+
+        try
+        {
+            context.CopyResource(source, _stagingTexture);
+            context.MapSubresource(_stagingTexture, 0, MapMode.Read,
+                MapFlags.None, out var map);
+
+            var desc = _stagingTexture!.Description;
+            var w = desc.Width;
+            var h = desc.Height;
+            var pitch = w * 4;
+            var baseAddr = map.DataPointer;
+
+            long sumR = 0, sumG = 0, sumB = 0;
+            long nonZero = 0, nonBackground = 0;
+
+            for (int y = 0; y < h; y++)
+            {
+                var row = IntPtr.Add(baseAddr, y * pitch);
+                for (int x = 0; x < w; x++)
+                {
+                    var px = Marshal.ReadInt32(row, x * 4);
+                    var r = px & 0xFF;
+                    var g = (px >> 8) & 0xFF;
+                    var b = (px >> 16) & 0xFF;
+                    sumR += r; sumG += g; sumB += b;
+                    if ((px & 0x00FF_FFFF) != 0) nonZero++;
+                    if (Math.Abs(r - 51) > 8 || Math.Abs(g - 51) > 8 ||
+                        Math.Abs(b - 51) > 8)
+                        nonBackground++;
+                }
+            }
+
+            var total = (long)w * h;
+            var text = new System.Text.StringBuilder();
+            text.AppendLine(
+                $"[{name}] {w}x{h} meanR={sumR / total} meanG={sumG / total} " +
+                $"meanB={sumB / total} nonZero={nonZero}/{total} " +
+                $"nonBg={nonBackground}/{total}");
+
+            const int cols = 64;
+            const int rows = 32;
+            const string ramp = " .:-=+*#%@";
+            for (int cy = 0; cy < rows; cy++)
+            {
+                var line = new System.Text.StringBuilder();
+                for (int cx = 0; cx < cols; cx++)
+                {
+                    var x = (int)((long)cx * w / cols);
+                    var y = (int)((long)cy * h / rows);
+                    var px = Marshal.ReadInt32(
+                        IntPtr.Add(baseAddr, y * pitch), x * 4);
+                    var lum = (px & 0xFF) * 30 + ((px >> 8) & 0xFF) * 59 +
+                        ((px >> 16) & 0xFF) * 11;
+                    var idx = lum * 9 / 25500;
+                    if (idx < 0) idx = 0;
+                    if (idx > 9) idx = 9;
+                    line.Append(ramp[idx]);
+                }
+                text.AppendLine(line.ToString());
+            }
+
+            context.UnmapSubresource(_stagingTexture, 0);
+            Diag(text.ToString());
+        }
+        catch (SharpDXException ex)
+        {
+            Diag($"DUMPFAIL {name} hr={ex.HResult}");
+        }
+    }
+
+    /// <summary>
+    /// TEMPORARY DIAGNOSTIC: appends text to diag.log.
+    /// </summary>
+    private static void Diag(string text)
+    {
+        const string path = @"c:\Users\VABG\source\repos\SharpDXModelViewer\smaa_ref\diag.log";
+        try
+        {
+            System.IO.File.AppendAllText(path, text);
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Uploads SMAA_RT_METRICS = (1/width, 1/height, width, height) to cbuffer
+    /// b0. The reference header has no default for this macro, so it is fed in
+    /// as a constant buffer bound to 'SMAARtMetrics' by every SMAA wrapper
+    /// shader. Only 16 bytes — uploading per frame keeps the value correct
+    /// across swap-chain resizes without extra bookkeeping.
+    /// </summary>
+    private void UploadRtMetrics(DeviceContext context)
+    {
+        var metrics = new Vector4(
+            1.0f / _width,
+            1.0f / _height,
+            (float)_width,
+            (float)_height);
+
+        context.MapSubresource(_constantsBuffer, MapMode.WriteDiscard,
+            MapFlags.None, out var data);
+        Marshal.StructureToPtr(metrics, data.DataPointer, false);
+        context.UnmapSubresource(_constantsBuffer, 0);
+    }
+
+    /// <summary>
+    /// Input layout for the fullscreen quad: a single float4 POSITION, matching
+    /// the SMAA wrapper vertex shaders.
+    /// </summary>
+    private static InputLayout CreateQuadInputLayout(
+        Device device, ShaderSignature signature)
+    {
+        var elements = new[]
+        {
+            new InputElement("POSITION", 0,
+                SharpDX.DXGI.Format.R32G32B32A32_Float, 0),
+        };
+        return new InputLayout(device, signature, elements);
+    }
+
+    /// <summary>
+    /// Loads one of SMAA's two lookup tables from a .dds asset in the Shaders
+    /// folder and uploads it as a Dynamic shader-resource texture.
+    ///
+    /// The assets are authored in DXGI-native form — AreaTexDX9.dds is R8G8_UNORM
+    /// and SearchTex.dds is R8_UNORM — so no pixel decoding is required: the
+    /// loader only validates the magic, works out the pixel block size and copies
+    /// the payload verbatim.  Marshal.Copy has no byte[] overload, so the payload
+    /// is repacked into little-endian 32-bit words (both payloads are a whole
+    /// number of words).
+    ///
+    /// Expected dimensions are supplied by the caller and cross-checked against
+    /// the header: these SMAA assets store height at @12 and width at @16.
+    /// (Their DX9 format field at @72 and the DXGI format field at @124 are both
+    /// zero, so the payload size is the only usable validation — it pins the
+    /// bytes-per-texel, which is what distinguishes R8G8_UNORM from R8_UNORM.)
+    /// </summary>
+    private static (Texture2D, ShaderResourceView) LoadDdsTexture(
+        Device device, string path, int expectedWidth, int expectedHeight,
+        int bytesPerPixel, Format dxgiFormat)
+    {
+        if (!File.Exists(path))
+            throw new FileNotFoundException(
+                $"SMAA lookup texture not found: {path}");
+
+        var bytes = File.ReadAllBytes(path);
+        if (bytes.Length < 128)
+            throw new InvalidOperationException(
+                $"SMAA lookup texture '{path}' is truncated (header needs 128 bytes)");
+
+        if (bytes[0] != 'D' || bytes[1] != 'D' || bytes[2] != 'S' || bytes[3] != ' ')
+            throw new InvalidOperationException(
+                $"SMAA lookup texture '{path}' is not a DDS file");
+
+        // 124-byte DX9 header + 4-byte four-padded field = 128 bytes of header.
+        var headerSize = 128;
+        var payloadSize = bytes.Length - headerSize;
+
+        if (payloadSize % 4 != 0)
+            throw new InvalidOperationException(
+                $"SMAA lookup texture '{path}' has a payload that is not a whole number of 32-bit words");
+
+        var width = expectedWidth;
+        var height = expectedHeight;
+
+        var a = ReadUInt32(bytes, 12);
+        var b = ReadUInt32(bytes, 16);
+        if ((long)a * b * bytesPerPixel == payloadSize)
+        {
+            // Header agrees with the payload: @12 = height, @16 = width.
+            height = a;
+            width = b;
+        }
+        else if ((long)expectedWidth * expectedHeight * bytesPerPixel != payloadSize)
+        {
+            throw new InvalidOperationException(
+                $"SMAA lookup texture '{path}': {payloadSize} payload bytes do not match " +
+                $"{expectedWidth}x{expectedHeight} at {bytesPerPixel} bytes per texel");
+        }
+
+        var desc = new Texture2DDescription
+        {
+            Width = width,
+            Height = height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = dxgiFormat,
+            SampleDescription = new SampleDescription(1, 0),
+            // Dynamic (not Default) so the payload can be mapped in once; the
+            // tables never change after load.
+            Usage = ResourceUsage.Dynamic,
+            BindFlags = BindFlags.ShaderResource,
+            CpuAccessFlags = CpuAccessFlags.Write,
+            OptionFlags = ResourceOptionFlags.None,
+        };
+        var texture = new Texture2D(device, desc);
+
+        var words = new int[payloadSize / 4];
+        for (int i = 0, j = 0; i < words.Length; i++, j += 4)
+        {
+            words[i] = bytes[j]
+                | (bytes[j + 1] << 8)
+                | (bytes[j + 2] << 16)
+                | (bytes[j + 3] << 24);
+        }
+
+        var context = device.ImmediateContext;
+        context.MapSubresource(texture, 0, MapMode.WriteDiscard, MapFlags.None,
+            out var mapped);
+        Marshal.Copy(words, 0, mapped.DataPointer, words.Length);
+        context.UnmapSubresource(texture, 0);
+
+        return (texture, new ShaderResourceView(device, texture));
+    }
+
+    /// <summary>
+    /// Reads a little-endian unsigned 32-bit field out of a DDS header.
+    /// </summary>
+    private static int ReadUInt32(byte[] bytes, int offset)
+    {
+        return bytes[offset]
+            | (bytes[offset + 1] << 8)
+            | (bytes[offset + 2] << 16)
+            | (bytes[offset + 3] << 24);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        ReleaseScreenTargets();
+
+        _searchSrv?.Dispose();
+        _searchTexture?.Dispose();
+        _areaSrv?.Dispose();
+        _areaTexture?.Dispose();
+
+        _resolveInputLayout.Dispose();
+        _resolvePixelShader.Dispose();
+        _resolveVertexShader.Dispose();
+        _weightsInputLayout.Dispose();
+        _weightsPixelShader.Dispose();
+        _weightsVertexShader.Dispose();
+        _edgeInputLayout.Dispose();
+        _edgePixelShader.Dispose();
+        _edgeVertexShader.Dispose();
+
+        _passthroughDepthState.Dispose();
+        _constantsBuffer.Dispose();
+        _quadIndexBuffer.Dispose();
+        _quadVertexBuffer.Dispose();
+    }
+}
+

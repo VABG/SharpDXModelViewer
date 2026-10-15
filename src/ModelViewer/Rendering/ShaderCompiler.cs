@@ -44,6 +44,49 @@ public sealed class CompiledShaders : IDisposable
 public static class ShaderCompiler
 {
     /// <summary>
+    /// Reads an HLSL file and expands local '#include "file"' directives.
+    ///
+    /// SharpDX's CompileFromFile never enables D3D's standard-file-include compile
+    /// flag (ShaderFlags has no member for that bit), so a wrapper that pulls in
+    /// another file — the SMAA passes include 'SMAA.hlsl' — would otherwise fail
+    /// with "X1505: No include handler specified, can't perform a #include".
+    /// Expanding the directives here keeps the shaders modular while still
+    /// compiling through ShaderBytecode.Compile.
+    /// </summary>
+    private static string ReadWithIncludes(string filePath, int depth = 0)
+    {
+        var text = File.ReadAllText(filePath);
+        if (depth > 8)
+            return text;
+
+        var directory = Path.GetDirectoryName(filePath)!;
+        var parts = new string[text.Split('\n').Length];
+        var index = 0;
+
+        foreach (var line in text.Split('\n'))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("#include \"") && trimmed.EndsWith("\"") &&
+                trimmed.Length > 11)
+            {
+                var includeName = trimmed[10..^1];
+                var includePath = Path.Combine(directory, includeName);
+                if (!File.Exists(includePath))
+                    throw new FileNotFoundException(
+                        $"#include \"{includeName}\" was not found next to {filePath}");
+
+                parts[index++] = ReadWithIncludes(includePath, depth + 1) + "\n";
+            }
+            else
+            {
+                parts[index++] = line + "\n";
+            }
+        }
+
+        return String.Join("", parts);
+    }
+
+    /// <summary>
     /// Default input layout for Position / Normal / Texture coordinate vertices.
     /// </summary>
     private static readonly InputElement[] DefaultInputElements =
@@ -52,6 +95,7 @@ public static class ShaderCompiler
         new("Normal", 0, SharpDX.DXGI.Format.R32G32B32_Float, 0),
         new("TexCoord", 0, SharpDX.DXGI.Format.R32G32_Float, 0),
     };
+
 
     /// <summary>
     /// Compiles a single vertex shader from an HLSL file.
@@ -70,7 +114,7 @@ public static class ShaderCompiler
         ShaderBytecode blob;
         try
         {
-            blob = ShaderBytecode.CompileFromFile(filePath, entryPoint, profile);
+            blob = ShaderBytecode.Compile(ReadWithIncludes(filePath), entryPoint, profile);
         }
         catch (SharpDXException ex)
         {
@@ -101,7 +145,7 @@ public static class ShaderCompiler
         ShaderBytecode blob;
         try
         {
-            blob = ShaderBytecode.CompileFromFile(filePath, entryPoint, profile);
+            blob = ShaderBytecode.Compile(ReadWithIncludes(filePath), entryPoint, profile);
         }
         catch (SharpDXException ex)
         {
