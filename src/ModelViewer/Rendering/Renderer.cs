@@ -113,6 +113,26 @@ public class Renderer : IDisposable
 
     private readonly Stopwatch _fpsWatch = new();
 
+    // ── Frame-rate cap for the render loop ──
+    // 0 = uncapped (the loop is limited only by the GPU). Written from the UI
+    // thread and read by the render thread; a plain int read is atomic, so no
+    // lock is needed for this advisory value.
+    private int _targetFps;
+
+    /// <summary>
+    /// Caps the render loop at the given frame rate (0 = uncapped).
+    /// Call from the UI thread; takes effect on the next frame.
+    /// </summary>
+    public void SetTargetFps(int fps)
+    {
+        _targetFps = Math.Max(0, fps);
+    }
+
+    /// <summary>
+    /// The frame-rate cap currently applied to the render loop (0 = uncapped).
+    /// </summary>
+    public int TargetFps => _targetFps;
+
     /// <summary>
     /// Callback invoked once per second with the current FPS.
     /// Used by the UI to update the status bar.
@@ -192,7 +212,7 @@ public class Renderer : IDisposable
     /// </summary>
     private void UpdateLoop(CancellationToken token)
     {
-        const int targetIntervalMs = 16; // ~60 Hz
+       // const int targetIntervalMs = 16; // ~60 Hz
         var lastTimestamp = Stopwatch.GetTimestamp();
         var ticksPerMs = Stopwatch.Frequency / 1000.0;
 
@@ -205,7 +225,7 @@ public class Renderer : IDisposable
                 lastTimestamp = now;
 
                 // Sleep to maintain ~60 Hz cadence
-                Thread.Sleep(targetIntervalMs);
+                //Thread.Sleep(targetIntervalMs);
             }
             catch (ObjectDisposedException)
             {
@@ -388,6 +408,7 @@ public class Renderer : IDisposable
     private bool _diagApplyLogged;
     private int _diagLoopCount;
 
+
     private void RenderDiagOnce(int width, int height, bool smaaActive)
     {
         if (_diagFrameLogged) return;
@@ -412,6 +433,74 @@ public class Renderer : IDisposable
         catch { }
     }
 
+    // ── High-resolution frame pacing ───────────────────────────────────────
+    // Thread.Sleep() cannot pace a fast render loop: Windows' Sleep() is
+    // driven by a 15.6 ms timer, so Sleep(1) waits ~15.6 ms and silently
+    // capped the loop near 60 FPS. ntdll's Wait() takes 100 ns units and
+    // gives real sub-millisecond waits (same interop style as D3DRenderSurface's
+    // user32.dll bindings).
+    [DllImport("ntdll.dll")]
+    private static extern int NtCreateWaitHandle(out IntPtr waitHandle, uint name);
+
+    [DllImport("ntdll.dll")]
+    private static extern int NtWait(IntPtr waitHandle, long timeout100Ns);
+
+    [DllImport("ntdll.dll")]
+    private static extern int NtClose(IntPtr handle);
+
+    private bool _highResWaitSupported = true;
+    private IntPtr _ntWaitHandle = IntPtr.Zero;
+
+    /// <summary>
+    /// Sleeps the given number of milliseconds with sub-millisecond precision,
+    /// falling back to Thread.Sleep if ntdll's Wait() is unavailable.
+    /// Render-thread only.
+    /// </summary>
+    private void HighResSleep(double milliseconds)
+    {
+        if (milliseconds <= 0.0) return;
+
+        if (!_highResWaitSupported)
+        {
+            Thread.Sleep((int)Math.Ceiling(milliseconds));
+            return;
+        }
+
+        try
+        {
+            if (_ntWaitHandle == IntPtr.Zero &&
+                NtCreateWaitHandle(out _ntWaitHandle, 0) != 0)
+            {
+                _ntWaitHandle = IntPtr.Zero;
+                _highResWaitSupported = false;
+                Thread.Sleep((int)Math.Ceiling(milliseconds));
+                return;
+            }
+
+            // The timeout is expressed in 100-nanosecond units.
+            NtWait(_ntWaitHandle, (long)(milliseconds * 10_000.0));
+        }
+        catch
+        {
+            _highResWaitSupported = false;
+            Thread.Sleep((int)Math.Ceiling(milliseconds));
+        }
+    }
+
+    /// <summary>
+    /// Waits only as long as needed to hold the render loop at TargetFps.
+    /// TargetFps == 0 (uncapped) skips the wait entirely.
+    /// </summary>
+    private void PaceFrame(long frameStart)
+    {
+        var target = _targetFps;
+        if (target <= 0) return;
+
+        var budgetMs = 1000.0 / target;
+        var elapsedMs = (Stopwatch.GetTimestamp() - frameStart) * 1000.0 / Stopwatch.Frequency;
+        HighResSleep(budgetMs - elapsedMs);
+    }
+
     private void RenderLoop(CancellationToken token)
     {
         var device = _deviceManager.Device;
@@ -421,6 +510,8 @@ public class Renderer : IDisposable
         {
             try
             {
+                // Timestamp the frame so the loop can pace itself at the end.
+                var frameStart = Stopwatch.GetTimestamp();
                 // ── Handle pending resize on the render thread ─────────────────
                 // ArrangeOverride (UI thread) queues resize dimensions. We consume
                 // them here so ResizeBuffers runs while no resources are bound,
@@ -527,7 +618,7 @@ public class Renderer : IDisposable
 
                 TickFps();
 
-                Thread.Sleep(1);
+                PaceFrame(frameStart);
             }
             catch (ObjectDisposedException)
             {
@@ -578,6 +669,13 @@ public class Renderer : IDisposable
         _cts.Cancel();
         _renderLoopTask?.Wait(2000);
         _updateLoopTask?.Wait(2000);
+
+        // Release the ntdll wait handle used by the frame pacer.
+        if (_ntWaitHandle != IntPtr.Zero)
+        {
+            try { NtClose(_ntWaitHandle); } catch { }
+            _ntWaitHandle = IntPtr.Zero;
+        }
 
         _inputHandler.Dispose();
         _modelList.Dispose();

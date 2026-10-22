@@ -38,6 +38,18 @@ public class D3DRenderSurface : HwndHost
     private IntPtr _originalWndProc;
     private readonly Format _renderTargetFormat = Format.R8G8B8A8_UNorm;
 
+    // Back-buffer count for the swap chain.
+    //
+    // A windowed swap chain with a SINGLE back buffer is throttled by the
+    // desktop compositor: DXGI cannot recycle the buffer until DWM is done
+    // reading the image it just composited into the WPF visual tree, so
+    // Present() blocks until the next display retrace and the render loop
+    // is locked to the monitor refresh (~60 Hz).
+    //
+    // With two or more buffers DXGI rotates them instead, Present() returns
+    // immediately and the loop is only limited by the GPU itself.
+    private const int SwapBufferCount = 2;
+
     // Static lookup: HWND -> D3DRenderSurface instance (for the WNDPROC callback)
     private static readonly Dictionary<IntPtr, D3DRenderSurface> Instances = new();
     private static readonly Lock InstancesLock = new();
@@ -196,7 +208,7 @@ public class D3DRenderSurface : HwndHost
 
             var swapChainDesc = new SwapChainDescription
             {
-                BufferCount = 1,
+                BufferCount = SwapBufferCount,
                 Usage = Usage.RenderTargetOutput,
                 IsWindowed = true,
                 SwapEffect = SwapEffect.Discard,
@@ -443,7 +455,7 @@ public class D3DRenderSurface : HwndHost
 
         try
         {
-            _swapChain.ResizeBuffers(1, width, height, _renderTargetFormat, SwapChainFlags.None);
+            _swapChain.ResizeBuffers(SwapBufferCount, width, height, _renderTargetFormat, SwapChainFlags.None);
         }
         catch (SharpDXException ex)
         {
@@ -461,6 +473,11 @@ public class D3DRenderSurface : HwndHost
 
     /// <summary>
     /// Present the back buffer to the screen.
+    ///
+    /// PresentFlags.None means "do not wait for the display retrace". Combined
+    /// with SwapBufferCount > 1 this lets the render loop run uncapped; the
+    /// compositor still shows at most one image per refresh, but the loop is
+    /// no longer blocked by DXGI.
     /// </summary>
     public void Present()
     {
